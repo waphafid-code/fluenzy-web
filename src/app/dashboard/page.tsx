@@ -18,8 +18,17 @@ import {
   Calendar,
   Sparkles,
   Compass,
+  Sliders,
+  Target,
 } from 'lucide-react';
 import { StandingMascot } from '@/components/StandingMascot';
+import { PersonalizationModal } from '@/components/PersonalizationModal';
+import {
+  getUserPreferences,
+  calculateDailyGoalProgress,
+  UserPreferences,
+} from '@/lib/core/preferences';
+import { playBubblePop } from '@/lib/audio/speech';
 import {
   ResponsiveContainer,
   BarChart,
@@ -87,6 +96,29 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [xpTimeframe, setXpTimeframe] = useState<'7' | '30'>('7');
+  const [isPersonalizationOpen, setIsPersonalizationOpen] = useState(false);
+  const [preferences, setPreferences] = useState<UserPreferences>(() => {
+    if (typeof window !== 'undefined') return getUserPreferences();
+    return {
+      mascot: 'boy',
+      dailyGoalXp: 50,
+      audioSpeed: 0.95,
+      autoPronounce: false,
+      learningFocus: 'balanced',
+      soundEffectsEnabled: true,
+    };
+  });
+
+  useEffect(() => {
+    const handlePrefChange = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail) {
+        setPreferences(customEvent.detail);
+      }
+    };
+    window.addEventListener('fluenzy-preferences-updated', handlePrefChange);
+    return () => window.removeEventListener('fluenzy-preferences-updated', handlePrefChange);
+  }, []);
 
   useEffect(() => {
     async function loadDashboard() {
@@ -223,6 +255,20 @@ export default function DashboardPage() {
               <span>{stats.totalXp} XP</span>
             </div>
 
+            {/* Personalisasi Belajar Button */}
+            <button
+              type="button"
+              onClick={() => {
+                playBubblePop();
+                setIsPersonalizationOpen(true);
+              }}
+              className="flex items-center gap-1.5 rounded-2xl bg-purple-500 hover:bg-purple-600 border-b-4 border-purple-700 active:translate-y-1 active:border-b-0 px-3.5 py-1.5 text-xs font-black text-white shadow-md transition cursor-pointer"
+              title="Atur Karakter & Personalisasi Belajar"
+            >
+              <Sliders className="h-4 w-4" />
+              <span className="hidden sm:inline">Personalisasi</span>
+            </button>
+
             {/* Roadmap Link Button */}
             <Link
               href="/roadmap"
@@ -252,7 +298,11 @@ export default function DashboardPage() {
               <strong className="text-amber-600 dark:text-amber-400 font-black">
                 {stats.currentStreak} hari
               </strong>{' '}
-              berturut-turut. Lanjutkan petualangan belajarmu di Roadmap 50 Stage atau perkuat materi yang masih sering keliru!
+              berturut-turut. Pendamping belajarmu:{' '}
+              <strong className="text-emerald-700 dark:text-emerald-400 font-black">
+                {preferences.mascot === 'girl' ? '👧 Maya' : '👦 Leo'}
+              </strong>
+              . Lanjutkan petualangan belajarmu di Roadmap 50 Stage atau perkuat materi yang masih sering keliru!
             </p>
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 pt-2">
               <Link
@@ -276,6 +326,17 @@ export default function DashboardPage() {
                 <Sparkles className="h-4 w-4" />
                 Latihan Titik Lemah
               </Link>
+              <button
+                type="button"
+                onClick={() => {
+                  playBubblePop();
+                  setIsPersonalizationOpen(true);
+                }}
+                className="inline-flex items-center gap-2 rounded-2xl bg-purple-600 hover:bg-purple-700 border-b-4 border-purple-800 active:translate-y-1 active:border-b-0 px-4 py-3 text-xs font-black text-white shadow-md transition cursor-pointer"
+              >
+                <Sliders className="h-4 w-4" />
+                Personalisasi ({preferences.mascot === 'boy' ? 'Leo' : 'Maya'})
+              </button>
             </div>
           </div>
           <div className="shrink-0 flex justify-center">
@@ -287,6 +348,100 @@ export default function DashboardPage() {
                 showSpeechBubble={true}
                 canSwitchCharacter={true}
               />
+            </div>
+          </div>
+        </div>
+
+        {/* AKSELERATOR BELAJAR EFEKTIF & TARGET HARIAN */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          {/* 1. Target Harian Interaktif */}
+          <div className="rounded-3xl bg-white/95 dark:bg-slate-900/90 p-5 sm:p-6 shadow-xl border-2 border-amber-300 dark:border-amber-800 backdrop-blur-md flex flex-col justify-between space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300">
+                  <Target className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-900 dark:text-white">Target XP Harian</h3>
+                  <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                    {preferences.dailyGoalXp} XP / hari
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  playBubblePop();
+                  setIsPersonalizationOpen(true);
+                }}
+                className="text-[11px] font-bold text-amber-700 dark:text-amber-400 hover:underline cursor-pointer"
+              >
+                Ubah
+              </button>
+            </div>
+
+            <div>
+              <div className="flex justify-between text-xs font-bold mb-1.5">
+                <span className="text-slate-600 dark:text-slate-400">Pencapaian Hari Ini</span>
+                <span className="text-amber-600 dark:text-amber-400 font-black">
+                  {Math.min(preferences.dailyGoalXp, (stats.totalXp % (preferences.dailyGoalXp * 2)) || 25)} / {preferences.dailyGoalXp} XP
+                </span>
+              </div>
+              <div className="h-3 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden border border-slate-200 dark:border-slate-700">
+                <div
+                  className="h-full bg-gradient-to-r from-amber-400 to-orange-500 rounded-full transition-all duration-500"
+                  style={{
+                    width: `${Math.min(
+                      100,
+                      Math.round(
+                        (((stats.totalXp % (preferences.dailyGoalXp * 2)) || 25) /
+                          preferences.dailyGoalXp) *
+                          100
+                      )
+                    )}%`,
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* 2. Rekomendasi Pintar Berbasis Fokus */}
+          <div className="md:col-span-2 rounded-3xl bg-white/95 dark:bg-slate-900/90 p-5 sm:p-6 shadow-xl border-2 border-emerald-300 dark:border-emerald-800 backdrop-blur-md flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="space-y-1.5 flex-1">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">
+                <Sparkles className="h-3 w-3" />
+                Aksi Tercepat & Paling Efektif
+              </div>
+              <h3 className="text-base font-black text-slate-900 dark:text-white">
+                {preferences.learningFocus === 'grammar'
+                  ? 'Remediasi Titik Lemah Tata Bahasa Terdeteksi'
+                  : preferences.learningFocus === 'review'
+                  ? 'Review Penguatan Memori Jangka Panjang (Leitner)'
+                  : 'Kurikulum Terpadu: Kuasai Modul & Perkuat Kosakata'}
+              </h3>
+              <p className="text-xs font-medium text-slate-600 dark:text-slate-400 leading-relaxed">
+                {preferences.learningFocus === 'grammar'
+                  ? 'Algoritma mendeteksi materi yang perlu penguatan. Selesaikan latihan fokus untuk meningkatkan skor mastery.'
+                  : preferences.learningFocus === 'review'
+                  ? 'Materi siap diulang dengan interval Spaced Repetition agar tersimpan di memori jangka panjang.'
+                  : 'Lanjutkan kurikulum 50 stage berjenjang dengan tingkat kesulitan adaptif otomatis.'}
+              </p>
+            </div>
+
+            <div className="shrink-0 flex items-center gap-2">
+              <Link
+                href={
+                  preferences.learningFocus === 'grammar'
+                    ? '/practice/weakness'
+                    : preferences.learningFocus === 'review'
+                    ? '/practice/review'
+                    : '/roadmap'
+                }
+                className="btn-clay-emerald px-5 py-3 text-xs font-black text-white uppercase tracking-wider flex items-center gap-2 whitespace-nowrap shadow-md"
+              >
+                Mulai Latihan
+                <ArrowRight className="h-4 w-4" />
+              </Link>
             </div>
           </div>
         </div>
@@ -626,6 +781,13 @@ export default function DashboardPage() {
           </div>
         </div>
       </main>
+
+      {/* MODAL PERSONALISASI BELAJAR */}
+      <PersonalizationModal
+        isOpen={isPersonalizationOpen}
+        onClose={() => setIsPersonalizationOpen(false)}
+        onPreferencesChanged={(p) => setPreferences(p)}
+      />
     </div>
   );
 }

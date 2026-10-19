@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Volume2, Sparkles, MessageCircle, Heart } from 'lucide-react';
 import { speakText, playBubblePop } from '@/lib/audio/speech';
+import { getUserPreferences, saveUserPreferences } from '@/lib/core/preferences';
 
 export type MascotMood = 'idle' | 'talking' | 'celebrate' | 'thinking' | 'encouraging';
 export type MascotType = 'boy' | 'girl';
@@ -37,10 +38,27 @@ export function StandingMascot({
   showSpeechBubble = true,
   canSwitchCharacter = true,
 }: StandingMascotProps) {
-  const [mascotType, setMascotType] = useState<MascotType>('boy');
+  const [mascotType, setMascotType] = useState<MascotType>(() => {
+    if (typeof window !== 'undefined') {
+      return getUserPreferences().mascot;
+    }
+    return 'boy';
+  });
   const [activeMood, setActiveMood] = useState<MascotMood>(mood);
   const [bubbleText, setBubbleText] = useState<string | null>(message || null);
   const [internalTalking, setInternalTalking] = useState(false);
+
+  // Sinkronisasi preferensi maskot secara real-time
+  useEffect(() => {
+    const handlePrefChange = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail?.mascot) {
+        setMascotType(customEvent.detail.mascot);
+      }
+    };
+    window.addEventListener('fluenzy-preferences-updated', handlePrefChange);
+    return () => window.removeEventListener('fluenzy-preferences-updated', handlePrefChange);
+  }, []);
 
   // Sinkronisasi mood dari props
   useEffect(() => {
@@ -165,6 +183,7 @@ export function StandingMascot({
               e.stopPropagation();
               playBubblePop();
               setMascotType('boy');
+              saveUserPreferences({ mascot: 'boy' });
               setBubbleText("Hi! I'm Leo! Let's learn!");
             }}
             className={`px-2.5 py-1 text-[11px] font-bold rounded-full transition ${
@@ -181,6 +200,7 @@ export function StandingMascot({
               e.stopPropagation();
               playBubblePop();
               setMascotType('girl');
+              saveUserPreferences({ mascot: 'girl' });
               setBubbleText("Hello! I'm Maya! Ready?");
             }}
             className={`px-2.5 py-1 text-[11px] font-bold rounded-full transition ${

@@ -16,8 +16,11 @@ import {
   Zap,
   Gauge,
   Lightbulb,
+  Sliders,
 } from 'lucide-react';
 import { StandingMascot, MascotMood } from '@/components/StandingMascot';
+import { PersonalizationModal } from '@/components/PersonalizationModal';
+import { getUserPreferences } from '@/lib/core/preferences';
 import {
   speakText,
   speakWord,
@@ -59,8 +62,25 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
   const [error, setError] = useState<string | null>(null);
 
   // Audio & Kecepatan Suara
-  const [speechRate, setSpeechRate] = useState<number>(1.0);
+  const [speechRate, setSpeechRate] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      return getUserPreferences().audioSpeed;
+    }
+    return 0.95;
+  });
   const [isTalking, setIsTalking] = useState<boolean>(false);
+  const [isPersonalizationOpen, setIsPersonalizationOpen] = useState(false);
+
+  useEffect(() => {
+    const handlePrefChange = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail?.audioSpeed) {
+        setSpeechRate(customEvent.detail.audioSpeed);
+      }
+    };
+    window.addEventListener('fluenzy-preferences-updated', handlePrefChange);
+    return () => window.removeEventListener('fluenzy-preferences-updated', handlePrefChange);
+  }, []);
 
   // Status Maskot
   const [mascotMood, setMascotMood] = useState<MascotMood>('idle');
@@ -393,6 +413,47 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
     options = [];
   }
 
+  // Efektivitas Belajar: Pintasan Keyboard Cepat (1-4 untuk opsi, Enter untuk periksa/lanjut)
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        if (e.key === 'Enter' && !isEvaluating) {
+          e.preventDefault();
+          if (feedback) {
+            handleNextQuestion();
+          } else if (textAnswer.trim()) {
+            handleSubmitAnswer();
+          }
+        }
+        return;
+      }
+
+      if (feedback) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleNextQuestion();
+        }
+        return;
+      }
+
+      if (['1', '2', '3', '4'].includes(e.key)) {
+        const idx = parseInt(e.key, 10) - 1;
+        if (options && options[idx]) {
+          playBubblePop();
+          setSelectedOption(options[idx]);
+        }
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (selectedOption || textAnswer.trim() || wordOrderTokens.length > 0) {
+          handleSubmitAnswer();
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [feedback, selectedOption, textAnswer, wordOrderTokens, isEvaluating, options]);
+
   const progressPercent = Math.round(((currentIndex + 1) / questions.length) * 100);
 
   return (
@@ -449,6 +510,20 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
                 1.0x
               </button>
             </div>
+
+            {/* Personalisasi Quick Button */}
+            <button
+              type="button"
+              onClick={() => {
+                playBubblePop();
+                setIsPersonalizationOpen(true);
+              }}
+              className="hidden sm:flex items-center gap-1 rounded-2xl bg-purple-500 hover:bg-purple-600 border-b-2 border-purple-700 active:translate-y-0.5 active:border-b-0 px-2.5 py-1 text-[11px] font-black text-white shadow-xs transition cursor-pointer"
+              title="Atur Personalisasi Belajar"
+            >
+              <Sliders className="h-3.5 w-3.5" />
+              <span>Personalisasi</span>
+            </button>
 
             {/* Mode & Heart Indicator */}
             {mode === 'weakness' ? (
@@ -699,8 +774,12 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
               )}
             </div>
           ) : (
-            <div className="text-xs font-bold text-slate-400 hidden sm:block">
-              Pilih atau ketik jawabanmu, lalu tekan Periksa.
+            <div className="flex items-center gap-3 text-xs font-bold text-slate-400">
+              <span className="hidden sm:block">Pilih atau ketik jawabanmu, lalu tekan Periksa.</span>
+              <span className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[11px] text-slate-500 font-bold">
+                <kbd className="px-1.5 py-0.5 rounded bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 font-mono text-[10px]">1-4</kbd> Pilih
+                <kbd className="px-1.5 py-0.5 rounded bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 font-mono text-[10px]">Enter</kbd> Periksa
+              </span>
             </div>
           )}
 
@@ -736,6 +815,13 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
           </div>
         </div>
       </footer>
+
+      {/* MODAL PERSONALISASI BELAJAR */}
+      <PersonalizationModal
+        isOpen={isPersonalizationOpen}
+        onClose={() => setIsPersonalizationOpen(false)}
+        onPreferencesChanged={(p) => setSpeechRate(p.audioSpeed)}
+      />
     </div>
   );
 }
