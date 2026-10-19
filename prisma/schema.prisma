@@ -1,0 +1,218 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// -----------------------------------------------------------------------------
+// 1. USER & GAMIFICATION STATS
+// -----------------------------------------------------------------------------
+
+model User {
+  id              String             @id @default(cuid())
+  name            String
+  email           String             @unique
+  passwordHash    String
+  role            String             @default("student") // "student" | "teacher"
+  timezone        String             @default("Asia/Jakarta")
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  stats           UserStats?
+  lessonProgress  LessonProgress[]
+  answerLogs      AnswerLog[]
+  dailyActivities DailyActivity[]
+  skillMasteries  UserSkillMastery[]
+  reviewSchedules ReviewSchedule[]
+  susFeedbacks    SusFeedback[]
+}
+
+model UserStats {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  totalXp           Int      @default(0)
+  gems              Int      @default(50)
+  hearts            Int      @default(5)
+  heartsUpdatedAt   DateTime @default(now())
+  currentStreak     Int      @default(0)
+  longestStreak     Int      @default(0)
+  lastActiveDate    String?  // Format 'YYYY-MM-DD' berbasis timezone user
+  dailyGoalXp       Int      @default(30)
+  streakFreezeCount Int      @default(0) // Item pelindung bolos 1 hari
+}
+
+// -----------------------------------------------------------------------------
+// 2. CURRICULUM HIERARCHY (Course -> Unit -> Lesson -> Question)
+// -----------------------------------------------------------------------------
+
+model Course {
+  id             String   @id @default(cuid())
+  title          String
+  description    String?
+  language       String   @default("en")
+  targetLanguage String   @default("id")
+  order          Int      @default(1)
+  units          Unit[]
+}
+
+model Unit {
+  id          String   @id @default(cuid())
+  courseId    String
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  order       Int
+  lessons     Lesson[]
+
+  @@index([courseId])
+}
+
+model Lesson {
+  id          String           @id @default(cuid())
+  unitId      String
+  unit        Unit             @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  title       String
+  order       Int
+  questions   Question[]
+  progress    LessonProgress[]
+
+  @@index([unitId])
+}
+
+model Skill {
+  id            String             @id @default(cuid())
+  name          String             @unique // Misal: "Simple Past Tense", "Subject-Verb Agreement"
+  description   String?
+  questions     Question[]
+  answerLogs    AnswerLog[]
+  userMasteries UserSkillMastery[]
+}
+
+model Question {
+  id              String           @id @default(cuid())
+  lessonId        String
+  lesson          Lesson           @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  skillId         String
+  skill           Skill            @relation(fields: [skillId], references: [id])
+  type            String           // "multiple_choice" | "fill_blank" | "word_order" | "matching"
+  difficulty      Int              @default(1) // Skala 1 (A1 dasar) sampai 5 (B2 mahir)
+  prompt          String
+  payload         String           // JSON string: opsi, token kata, pasangan, atau jawaban terstandardisasi
+  explanation     String
+  answerLogs      AnswerLog[]
+  reviewSchedules ReviewSchedule[]
+
+  @@index([lessonId])
+  @@index([skillId])
+}
+
+// -----------------------------------------------------------------------------
+// 3. PROGRESS, TELEMETRY, SKILL MASTERY & SPACED REPETITION
+// -----------------------------------------------------------------------------
+
+model LessonProgress {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId    String
+  lesson      Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  status      String    @default("LOCKED") // "LOCKED" | "UNLOCKED" | "COMPLETED"
+  bestScore   Int       @default(0)        // Persentase akurasi tertinggi (0-100)
+  completedAt DateTime?
+
+  @@unique([userId, lessonId])
+  @@index([userId])
+}
+
+model AnswerLog {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questionId     String
+  question       Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  skillId        String
+  skill          Skill    @relation(fields: [skillId], references: [id])
+  exerciseType   String   // multiple_choice, fill_blank, word_order, matching
+  userAnswer     String   // Jawaban masukan pengguna (teks / serialisasi JSON)
+  correctAnswer  String   // Kunci jawaban acuan
+  isCorrect      Boolean
+  errorType      String?  // Taksonomi: typo, word_order, missing_word, extra_word, wrong_word, wrong_choice
+  responseTimeMs Int      // Kecepatan respon kognitif dalam milidetik
+  attemptNumber  Int      @default(1) // Percobaan ke-1, ke-2 (pengulangan di akhir sesi)
+  hintUsed       Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  @@index([userId, skillId])
+  @@index([userId, isCorrect])
+  @@index([createdAt])
+}
+
+model UserSkillMastery {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skillId           String
+  skill             Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  mastery           Float    @default(0.5) // Nilai kontinuitas 0.0 - 1.0 (EMA)
+  attempts          Int      @default(0)
+  correctCount      Int      @default(0)
+  lastPracticedAt   DateTime @default(now())
+  avgResponseTimeMs Float    @default(0.0)
+
+  @@unique([userId, skillId])
+  @@index([userId, mastery])
+}
+
+model ReviewSchedule {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questionId   String
+  question     Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  box          Int      @default(1) // Sistem Kotak Leitner (1 - 5)
+  nextReviewAt DateTime @default(now())
+
+  @@unique([userId, questionId])
+  @@index([userId, nextReviewAt])
+}
+
+model DailyActivity {
+  id               String @id @default(cuid())
+  userId           String
+  user             User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date             String // 'YYYY-MM-DD' waktu lokal pengguna
+  xpEarned         Int    @default(0)
+  lessonsCompleted Int    @default(0)
+
+  @@unique([userId, date])
+  @@index([userId, date])
+}
+
+// -----------------------------------------------------------------------------
+// 4. AI EXPLANATION CACHE & SUS EVALUATION
+// -----------------------------------------------------------------------------
+
+model AiExplanationCache {
+  id          String   @id @default(cuid())
+  cacheKey    String   @unique // Hash dari questionId + userAnswer
+  explanation String
+  createdAt   DateTime @default(now())
+}
+
+model SusFeedback {
+  id          String   @id @default(cuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  responses   String   // JSON array dari 10 jawaban skala SUS (1 - 5)
+  susScore    Float    // Nilai akhir SUS skala 0 - 100
+  feedback    String?  // Saran kualitatif terbuka
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+}
+
