@@ -1,35 +1,33 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans, Geist, Geist_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-const jakarta = Plus_Jakarta_Sans({
-  variable: "--font-jakarta",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+  display: "swap",
 });
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-mono",
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Fluenzy - AI Adaptive English Learning Platform",
-  description: "Platform belajar bahasa Inggris adaptif cerdas bergaya Duolingo dengan diagnosis kognitif, maskot interaktif, dan pengulangan berjarak.",
+  title: "Fluenzy — Adaptive English Learning System",
+  description:
+    "Sistem pembelajaran bahasa Inggris adaptif berbasis Spaced Repetition, analisis diagnostik kesalahan, dan kurikulum terstruktur 30 hari.",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
-    <html
-      lang="id"
-      className={`${jakarta.variable} ${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col font-sans selection:bg-emerald-300 dark:selection:bg-emerald-800 selection:text-emerald-950 dark:selection:text-emerald-100">
+    <html lang="id" className={`${inter.variable} ${jetbrainsMono.variable}`}>
+      <body className="font-sans antialiased bg-[#F8FAFC] text-slate-900 selection:bg-blue-600 selection:text-white">
         {children}
       </body>
     </html>

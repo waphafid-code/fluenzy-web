@@ -1,37 +1,63 @@
-'use client';
+"use client";
 
-import React, { Suspense } from 'react';
-import { useParams } from 'next/navigation';
-import { SessionPlayer } from '@/components/SessionPlayer';
+import { useEffect, useState, Suspense } from "react";
+import { useParams } from "next/navigation";
+import SessionPlayer, { QuestionItem } from "@/components/SessionPlayer";
 
-function LessonContent() {
+function LearnLessonContent() {
   const params = useParams();
-  const lessonId = typeof params?.lessonId === 'string' ? params.lessonId : 'lesson-1';
+  const lessonId = String(params?.lessonId || "1");
+  const [questions, setQuestions] = useState<QuestionItem[]>([]);
+  const [lessonTitle, setLessonTitle] = useState<string>(`Modul Pembelajaran #${lessonId}`);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`/api/session/questions?mode=lesson&lessonId=${encodeURIComponent(lessonId)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        const list = Array.isArray(data) ? data : data?.questions || [];
+        setQuestions(list);
+        if (data?.lessonTitle || data?.title) {
+          setLessonTitle(data.lessonTitle || data.title);
+        }
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, [lessonId]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-6">
+        <div className="text-xs font-mono uppercase tracking-wider text-slate-500">
+          Memuat soal modul pembelajaran...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <SessionPlayer
-      mode="lesson"
+      questions={questions}
+      sessionType="lesson"
+      title={lessonTitle}
+      subtitle={`Kurikulum Terstruktur — Modul ${lessonId}`}
       lessonId={lessonId}
-      title="Sesi Pelajaran Adaptif"
     />
   );
 }
 
-export default function LessonLearnPage() {
+export default function LearnLessonPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950 p-6">
-          <div className="text-center space-y-3">
-            <div className="inline-block h-10 w-10 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
-            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
-              Menyiapkan sesi belajar...
-            </p>
+        <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-6">
+          <div className="text-xs font-mono uppercase tracking-wider text-slate-500">
+            Memuat modul pembelajaran...
           </div>
         </div>
       }
     >
-      <LessonContent />
+      <LearnLessonContent />
     </Suspense>
   );
 }

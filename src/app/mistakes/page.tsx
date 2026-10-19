@@ -1,243 +1,202 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
-import {
-  ArrowLeft,
-  AlertTriangle,
-  Brain,
-  CheckCircle2,
-  Sparkles,
-  BookOpen,
-  Filter,
-} from 'lucide-react';
-import { ERROR_TYPE_LABELS } from '@/lib/core/insights';
+import { useEffect, useState } from "react";
+import Link from "next/link";
 
-interface MistakeItem {
-  logId: string;
-  questionId: string;
-  prompt: string;
+interface MistakeRecord {
+  id: string;
+  prompt?: string;
+  questionPrompt?: string;
   userAnswer: string;
-  correctAnswer: string;
-  explanation: string;
-  createdAt: string;
+  correctAnswer?: string;
+  errorType?: string;
+  skillName?: string;
+  explanation?: string;
+  createdAt?: string;
 }
 
-interface SkillMistakesGroup {
-  skillId: string;
-  skillName: string;
-  totalMistakes: number;
-  byErrorType: Record<string, { errorType: string; items: MistakeItem[] }>;
-}
-
-export default function MistakesReviewPage() {
-  const [data, setData] = useState<{ totalMistakes: number; skills: SkillMistakesGroup[] } | null>(null);
+export default function MistakesPage() {
+  const [mistakes, setMistakes] = useState<MistakeRecord[]>([]);
+  const [selectedFilter, setSelectedFilter] = useState<string>("ALL");
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedSkillFilter, setSelectedSkillFilter] = useState<string>('ALL');
 
   useEffect(() => {
-    async function fetchMistakes() {
-      try {
-        setLoading(true);
-        const res = await fetch('/api/mistakes');
-        if (!res.ok) throw new Error('Gagal memuat rekapitulasi kesalahan');
-        const json = await res.json();
-        setData(json);
-      } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
-      } finally {
+    fetch("/api/mistakes")
+      .then((res) => res.json())
+      .then((data) => {
+        const list = Array.isArray(data) ? data : data?.mistakes || [];
+        setMistakes(list);
         setLoading(false);
-      }
-    }
-    fetchMistakes();
+      })
+      .catch(() => setLoading(false));
   }, []);
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950 p-6">
-        <div className="text-center space-y-3">
-          <div className="inline-block h-10 w-10 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
-          <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
-            Mengumpulkan catatan kesalahan dan pembahasannya...
-          </p>
-        </div>
-      </div>
-    );
-  }
+  const errorTypes = Array.from(
+    new Set(mistakes.map((m) => m.errorType || "Grammar").filter(Boolean))
+  );
 
-  const skills = data?.skills || [];
-  const filteredSkills =
-    selectedSkillFilter === 'ALL'
-      ? skills
-      : skills.filter((s) => s.skillId === selectedSkillFilter);
+  const filteredMistakes =
+    selectedFilter === "ALL"
+      ? mistakes
+      : mistakes.filter((m) => (m.errorType || "Grammar") === selectedFilter);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50/50 via-slate-50 to-rose-50/40 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 text-slate-900 dark:text-slate-100 pb-16 relative overflow-hidden">
-      {/* AMBIENT GLOW BLOBS */}
-      <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-rose-400/15 dark:bg-rose-500/10 blur-3xl pointer-events-none -z-10" />
-      <div className="absolute top-1/3 -right-32 w-96 h-96 rounded-full bg-indigo-400/15 dark:bg-indigo-500/10 blur-3xl pointer-events-none -z-10" />
-      <div className="absolute -bottom-32 left-1/3 w-96 h-96 rounded-full bg-amber-400/15 dark:bg-amber-500/10 blur-3xl pointer-events-none -z-10" />
-
-      {/* Header Bar */}
-      <header className="border-b-2 border-slate-200/80 dark:border-slate-800/80 bg-white/85 dark:bg-slate-900/85 backdrop-blur-md sticky top-0 z-20 shadow-xs">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
-          <div className="flex items-center gap-3">
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-900">
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-20">
+        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-4">
             <Link
               href="/dashboard"
-              className="flex h-10 w-10 items-center justify-center rounded-2xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:border-slate-300 transition shadow-xs"
-              title="Kembali ke Dashboard"
+              className="text-xs font-medium text-slate-600 hover:text-slate-900 inline-flex items-center gap-1.5"
             >
-              <ArrowLeft className="h-5 w-5" />
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+              Dashboard
             </Link>
-            <div>
-              <h1 className="text-lg font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                <BookOpen className="h-5 w-5 text-indigo-500" />
-                Review Kesalahan & Pembahasan
-              </h1>
-              <p className="text-xs font-semibold text-slate-500">
-                Total {data?.totalMistakes || 0} kekeliruan yang pernah tercatat
-              </p>
-            </div>
+            <span className="text-slate-300">/</span>
+            <span className="font-semibold text-sm text-slate-900">
+              Log & Diagnostik Kesalahan
+            </span>
           </div>
 
           <Link
             href="/practice/weakness"
-            className="inline-flex items-center gap-2 rounded-2xl bg-amber-500 hover:bg-amber-600 border-b-4 border-amber-700 active:translate-y-1 active:border-b-0 px-4 py-2 text-xs font-black text-white shadow-md transition"
+            className="btn-tactile-primary px-4 py-2 text-xs"
           >
-            <Sparkles className="h-3.5 w-3.5" />
-            Latihan Remedial
+            Latih Topik Lemah
           </Link>
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 space-y-6">
-        {/* Filter per Skill */}
-        {skills.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-bold text-slate-500 flex items-center gap-1 mr-1">
-              <Filter className="h-3.5 w-3.5 text-indigo-500" /> Filter Materi:
-            </span>
+      <main className="max-w-6xl mx-auto px-6 py-8 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-slate-200 pb-6">
+          <div>
+            <div className="text-xs font-mono uppercase tracking-wider text-red-600 font-semibold">
+              Diagnostic Error Log
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 mt-1">
+              Analisis Riwayat Kesalahan
+            </h1>
+            <p className="text-sm text-slate-600 mt-1">
+              Daftar komprehensif kesalahan jawaban beserta klasifikasi tipe error dan penjelasan kaidah tata bahasanya.
+            </p>
+          </div>
+
+          {/* Filter Pills */}
+          <div className="flex flex-wrap gap-2">
             <button
-              onClick={() => setSelectedSkillFilter('ALL')}
-              className={`rounded-2xl px-3.5 py-1.5 text-xs font-black transition-all ${
-                selectedSkillFilter === 'ALL'
-                  ? 'bg-indigo-600 text-white shadow-md border-b-2 border-indigo-800'
-                  : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-2 border-slate-200 dark:border-slate-800 hover:border-indigo-400'
+              onClick={() => setSelectedFilter("ALL")}
+              className={`px-3 py-1.5 rounded-md text-xs font-mono font-medium border transition-colors ${
+                selectedFilter === "ALL"
+                  ? "bg-slate-900 text-white border-slate-900"
+                  : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
               }`}
             >
-              Semua ({data?.totalMistakes})
+              Semua ({mistakes.length})
             </button>
-            {skills.map((s) => (
+            {errorTypes.map((type) => (
               <button
-                key={s.skillId}
-                onClick={() => setSelectedSkillFilter(s.skillId)}
-                className={`rounded-2xl px-3.5 py-1.5 text-xs font-black transition-all ${
-                  selectedSkillFilter === s.skillId
-                    ? 'bg-indigo-600 text-white shadow-md border-b-2 border-indigo-800'
-                    : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-2 border-slate-200 dark:border-slate-800 hover:border-indigo-400'
+                key={type}
+                onClick={() => setSelectedFilter(type)}
+                className={`px-3 py-1.5 rounded-md text-xs font-mono font-medium border transition-colors ${
+                  selectedFilter === type
+                    ? "bg-slate-900 text-white border-slate-900"
+                    : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
                 }`}
               >
-                {s.skillName} ({s.totalMistakes})
+                {type}
               </button>
             ))}
           </div>
-        )}
+        </div>
 
-        {/* Daftar Kesalahan */}
-        {filteredSkills.length === 0 ? (
-          <div className="rounded-3xl bg-white/95 dark:bg-slate-900/90 p-12 text-center border-2 border-slate-200/90 dark:border-slate-800 shadow-xl backdrop-blur-md">
-            <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-500 mb-3" />
-            <h3 className="text-lg font-black text-slate-900 dark:text-slate-100">
-              Tidak Ada Rekaman Kesalahan!
-            </h3>
-            <p className="mt-1 text-sm font-medium text-slate-500">
-              Hebat! Kamu belum memiliki catatan jawaban salah pada kategori ini.
+        {loading ? (
+          <div className="space-y-4 animate-pulse">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-32 bg-slate-200 rounded-xl" />
+            ))}
+          </div>
+        ) : filteredMistakes.length === 0 ? (
+          <div className="surface-card p-10 text-center space-y-2">
+            <div className="text-sm font-semibold text-slate-900">
+              Belum Ada Catatan Kesalahan
+            </div>
+            <p className="text-xs text-slate-500 max-w-md mx-auto">
+              Anda belum memiliki kesalahan yang tercatat pada kategori ini. Teruskan latihan harian untuk memantau perkembangan akurasi Anda.
             </p>
           </div>
         ) : (
-          filteredSkills.map((group) => (
-            <div
-              key={group.skillId}
-              className="rounded-3xl bg-white/95 dark:bg-slate-900/90 p-6 sm:p-7 border-2 border-slate-200/90 dark:border-slate-800 shadow-xl space-y-6 backdrop-blur-md"
-            >
-              {/* Header Skill Group */}
-              <div className="flex items-center justify-between border-b-2 border-slate-100 dark:border-slate-800 pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-100 dark:bg-indigo-950 text-indigo-600 border border-indigo-200 dark:border-indigo-800 shadow-xs">
-                    <Brain className="h-5 w-5" />
+          <div className="space-y-4">
+            {filteredMistakes.map((item, idx) => (
+              <div key={item.id || idx} className="surface-card p-5 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-mono uppercase px-2 py-0.5 rounded bg-red-50 text-red-700 border border-red-200 font-medium">
+                      {item.errorType || "Grammar Error"}
+                    </span>
+                    {item.skillName && (
+                      <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">
+                        {item.skillName}
+                      </span>
+                    )}
                   </div>
-                  <div>
-                    <h3 className="font-black text-lg text-slate-900 dark:text-slate-100">
-                      {group.skillName}
-                    </h3>
-                    <span className="text-xs font-semibold text-slate-500">
-                      {group.totalMistakes} kali kesalahan tercatat
+                  {item.createdAt && (
+                    <span className="text-xs font-mono text-slate-400">
+                      {new Date(item.createdAt).toLocaleDateString("id-ID", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </span>
+                  )}
+                </div>
+
+                <div className="text-base font-semibold text-slate-900">
+                  {item.prompt || item.questionPrompt || "Pertanyaan Latihan"}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  <div className="p-3 rounded-lg bg-red-50/60 border border-red-200/80 text-xs">
+                    <span className="text-red-600 font-mono uppercase block text-[10px] font-semibold">
+                      Jawaban Anda
+                    </span>
+                    <span className="font-medium text-red-950 mt-0.5 block">
+                      {item.userAnswer}
                     </span>
                   </div>
-                </div>
-              </div>
 
-              {/* Kelompokkan per ErrorType */}
-              <div className="space-y-5">
-                {Object.values(group.byErrorType).map((errGroup) => {
-                  const errorLabel = ERROR_TYPE_LABELS[errGroup.errorType] || errGroup.errorType;
-                  return (
-                    <div key={errGroup.errorType} className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border border-rose-300 dark:border-rose-800 shadow-xs">
-                          {errorLabel}
-                        </span>
-                        <span className="text-xs font-bold text-slate-400">({errGroup.items.length} butir)</span>
-                      </div>
-
-                      {/* Kartu Soal dan Pembahasan */}
-                      <div className="space-y-3">
-                        {errGroup.items.map((item) => (
-                          <div
-                            key={item.logId}
-                            className="rounded-2xl border-2 border-slate-200/90 dark:border-slate-800 p-5 bg-slate-50/60 dark:bg-slate-800/40 space-y-3 text-sm shadow-xs"
-                          >
-                            <h4 className="font-black text-slate-900 dark:text-slate-100 text-base leading-snug">
-                              {item.prompt}
-                            </h4>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs pt-1">
-                              <div className="rounded-2xl bg-rose-50/80 dark:bg-rose-950/50 border-2 border-rose-200 dark:border-rose-900 p-3.5">
-                                <span className="font-black text-rose-700 dark:text-rose-300 block mb-1">
-                                  Jawabanmu yang keliru:
-                                </span>
-                                <span className="text-rose-900 dark:text-rose-200 font-bold line-through">
-                                  {item.userAnswer || '(kosong)'}
-                                </span>
-                              </div>
-
-                              <div className="rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/50 border-2 border-emerald-200 dark:border-emerald-900 p-3.5">
-                                <span className="font-black text-emerald-700 dark:text-emerald-300 block mb-1">
-                                  Kunci Jawaban yang Benar:
-                                </span>
-                                <span className="text-emerald-900 dark:text-emerald-200 font-black">
-                                  {item.correctAnswer}
-                                </span>
-                              </div>
-                            </div>
-
-                            <div className="text-xs text-slate-700 dark:text-slate-300 bg-white/90 dark:bg-slate-900/90 p-4 rounded-2xl border-2 border-slate-200 dark:border-slate-800 mt-2 leading-relaxed">
-                              <span className="font-black text-slate-900 dark:text-slate-100 block mb-1 flex items-center gap-1.5">
-                                <Sparkles className="h-3.5 w-3.5 text-indigo-500" />
-                                Penjelasan Kaidah:
-                              </span>
-                              {item.explanation}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                  {item.correctAnswer && (
+                    <div className="p-3 rounded-lg bg-emerald-50/60 border border-emerald-200/80 text-xs">
+                      <span className="text-emerald-700 font-mono uppercase block text-[10px] font-semibold">
+                        Jawaban Seharusnya
+                      </span>
+                      <span className="font-medium text-emerald-950 mt-0.5 block">
+                        {item.correctAnswer}
+                      </span>
                     </div>
-                  );
-                })}
+                  )}
+                </div>
+
+                {item.explanation && (
+                  <div className="pt-2 text-xs text-slate-600 leading-relaxed border-t border-slate-100">
+                    <strong className="text-slate-800">Penjelasan Kaidah: </strong>
+                    {item.explanation}
+                  </div>
+                )}
               </div>
-            </div>
-          ))
+            ))}
+          </div>
         )}
       </main>
     </div>

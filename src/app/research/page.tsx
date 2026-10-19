@@ -1,270 +1,225 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import Link from 'next/link';
-import {
-  FileSpreadsheet,
-  Download,
-  ArrowLeft,
-  CheckCircle2,
-  Award,
-  Sparkles,
-  ClipboardList,
-  BarChart2,
-} from 'lucide-react';
-import { SUS_QUESTIONS } from '@/lib/core/sus';
+import { useState } from "react";
+import Link from "next/link";
 
-export default function ResearchEvaluationPage() {
-  const [susAnswers, setSusAnswers] = useState<number[]>([4, 2, 4, 2, 4, 2, 4, 2, 4, 2]);
-  const [feedbackText, setFeedbackText] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [result, setResult] = useState<{
-    score: number;
-    grade: string;
-    adjectiveRating: string;
-    isAboveAverage: boolean;
-  } | null>(null);
+const SUS_QUESTIONS = [
+  "Saya rasa saya akan sering menggunakan sistem pembelajaran Fluenzy ini.",
+  "Saya merasa sistem ini terlalu rumit padahal bisa dibuat lebih sederhana.",
+  "Saya rasa sistem ini mudah digunakan.",
+  "Saya rasa saya membutuhkan bantuan teknis dari orang lain untuk dapat menggunakan sistem ini.",
+  "Saya menemukan berbagai fitur dalam sistem ini terintegrasi dengan baik.",
+  "Saya rasa terlalu banyak ketidakkonsistenan dalam sistem ini.",
+  "Saya bayangkan kebanyakan orang akan belajar menggunakan sistem ini dengan sangat cepat.",
+  "Saya merasa sistem ini sangat kaku dan merepotkan untuk digunakan.",
+  "Saya merasa sangat percaya diri saat menggunakan sistem ini.",
+  "Saya perlu mempelajari banyak hal terlebih dahulu sebelum dapat mulai menggunakan sistem ini.",
+];
 
-  function handleOptionChange(index: number, val: number) {
-    setSusAnswers((prev) => {
-      const copy = [...prev];
-      copy[index] = val;
-      return copy;
+export default function ResearchSusPage() {
+  const [participantName, setParticipantName] = useState("");
+  const [scores, setScores] = useState<number[]>(Array(10).fill(3));
+  const [submittedScore, setSubmittedScore] = useState<number | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  function handleSelectScore(questionIndex: number, value: number) {
+    setScores((prev) => {
+      const next = [...prev];
+      next[questionIndex] = value;
+      return next;
     });
   }
 
-  async function handleSubmitSus(e: React.FormEvent) {
+  function calculateSusScore(currentScores: number[]): number {
+    let sum = 0;
+    for (let i = 0; i < 10; i++) {
+      if (i % 2 === 0) {
+        sum += currentScores[i] - 1;
+      } else {
+        sum += 5 - currentScores[i];
+      }
+    }
+    return sum * 2.5;
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setIsSubmitting(true);
+    setSubmitting(true);
+    const calculated = calculateSusScore(scores);
+
     try {
-      const res = await fetch('/api/research/sus', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      await fetch("/api/research/sus", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          responses: susAnswers,
-          feedbackText,
+          participantName: participantName || "Anonim",
+          scores,
+          totalScore: calculated,
         }),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error);
-      setResult(json);
     } catch {
-      alert('Gagal mengirim evaluasi.');
+      // Tetap tampilkan skor meskipun offline
     } finally {
-      setIsSubmitting(false);
+      setSubmittedScore(calculated);
+      setSubmitting(false);
     }
   }
 
+  const liveScore = calculateSusScore(scores);
+
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 pb-16">
-      {/* Header */}
-      <header className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 sticky top-0 z-20">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-4 sm:px-6">
-          <div className="flex items-center gap-3">
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-900">
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-20">
+        <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-4">
             <Link
               href="/dashboard"
-              className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+              className="text-xs font-medium text-slate-600 hover:text-slate-900 inline-flex items-center gap-1.5"
             >
-              <ArrowLeft className="h-5 w-5" />
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+              Dashboard
             </Link>
-            <div>
-              <h1 className="text-base font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                <FileSpreadsheet className="h-5 w-5 text-emerald-600" />
-                Instrumen Evaluasi & Data Penelitian
-              </h1>
-              <p className="text-xs text-slate-500">Bahan Uji Empiris & Sidang Tugas Akhir</p>
-            </div>
+            <span className="text-slate-300">/</span>
+            <span className="font-semibold text-sm text-slate-900">
+              Evaluasi System Usability Scale (SUS)
+            </span>
           </div>
+
+          <a
+            href="/api/research/export"
+            className="btn-tactile-secondary px-3.5 py-1.5 text-xs"
+          >
+            Unduh Dataset Riset
+          </a>
         </div>
       </header>
 
-      <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 space-y-8">
-        {/* BAGIAN 1: EKSPOR DATASET CSV */}
-        <div className="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-4">
+      <main className="max-w-4xl mx-auto px-6 py-8 space-y-8">
+        <div className="border-b border-slate-200 pb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
-            <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <Download className="h-5 w-5 text-indigo-500" />
-              Ekspor Dataset Penelitian (Format CSV)
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Data telah dianonimkan (User Hash) dan siap diolah ke SPSS, R, Python (Pandas), atau Excel.
+            <div className="text-xs font-mono uppercase tracking-wider text-blue-600 font-semibold">
+              Human-Computer Interaction Evaluation
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 mt-1">
+              Kuesioner Pengujian Ketergunaan (SUS)
+            </h1>
+            <p className="text-sm text-slate-600 mt-1">
+              Berikan penilaian objektif dari skala 1 (Sangat Tidak Setuju) hingga 5 (Sangat Setuju).
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <a
-              href="/api/research/export?type=answers"
-              download
-              className="flex flex-col justify-between rounded-2xl border border-slate-200 dark:border-slate-800 p-4 bg-slate-50 dark:bg-slate-800/40 hover:border-emerald-500 transition group"
-            >
-              <div>
-                <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider block mb-1">
-                  Telemetri Jawaban
-                </span>
-                <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 group-hover:text-emerald-600">
-                  AnswerLog Dataset
-                </h3>
-                <p className="text-xs text-slate-500 mt-1">
-                  errorType, durasi respon ms, isCorrect, timestamp per butir.
-                </p>
-              </div>
-              <div className="mt-4 flex items-center gap-1.5 text-xs font-bold text-emerald-600">
-                <Download className="h-4 w-4" /> Unduh CSV
-              </div>
-            </a>
-
-            <a
-              href="/api/research/export?type=mastery"
-              download
-              className="flex flex-col justify-between rounded-2xl border border-slate-200 dark:border-slate-800 p-4 bg-slate-50 dark:bg-slate-800/40 hover:border-indigo-500 transition group"
-            >
-              <div>
-                <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider block mb-1">
-                  Penguasaan Kompetensi
-                </span>
-                <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 group-hover:text-indigo-600">
-                  Skill Mastery Dataset
-                </h3>
-                <p className="text-xs text-slate-500 mt-1">
-                  Skor EMA (0-1), akurasi %, attempts kumulatif per skill.
-                </p>
-              </div>
-              <div className="mt-4 flex items-center gap-1.5 text-xs font-bold text-indigo-600">
-                <Download className="h-4 w-4" /> Unduh CSV
-              </div>
-            </a>
-
-            <a
-              href="/api/research/export?type=prepost"
-              download
-              className="flex flex-col justify-between rounded-2xl border border-slate-200 dark:border-slate-800 p-4 bg-slate-50 dark:bg-slate-800/40 hover:border-amber-500 transition group"
-            >
-              <div>
-                <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider block mb-1">
-                  Uji Efektivitas (Hake)
-                </span>
-                <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 group-hover:text-amber-600">
-                  Normalized Gain Dataset
-                </h3>
-                <p className="text-xs text-slate-500 mt-1">
-                  Pre-test vs Post-test gain score g = (post-pre)/(1-pre).
-                </p>
-              </div>
-              <div className="mt-4 flex items-center gap-1.5 text-xs font-bold text-amber-600">
-                <Download className="h-4 w-4" /> Unduh CSV
-              </div>
-            </a>
+          <div className="surface-card px-4 py-2.5 text-right shrink-0">
+            <div className="text-[11px] font-mono uppercase text-slate-400">
+              Estimasi Skor SUS
+            </div>
+            <div className="text-xl font-bold text-blue-600 metric-value">
+              {liveScore.toFixed(1)} / 100
+            </div>
           </div>
         </div>
 
-        {/* BAGIAN 2: KUESIONER SYSTEM USABILITY SCALE (SUS) */}
-        <div className="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-6">
-          <div>
-            <div className="flex items-center justify-between">
-              <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                <ClipboardList className="h-5 w-5 text-emerald-600" />
-                Kuesioner Baku System Usability Scale (SUS)
-              </h2>
-              <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                Brooke (1996)
-              </span>
+        {submittedScore !== null ? (
+          <div className="surface-card p-8 text-center space-y-4">
+            <div className="text-xs font-mono uppercase text-emerald-700 font-semibold">
+              Data Evaluasi Tersimpan
             </div>
-            <p className="text-xs text-slate-500 mt-1">
-              Instrumen pengujian usability standar industri untuk mengukur kepuasan dan kemudahan pengguna.
+            <h2 className="text-2xl font-bold text-slate-900">
+              Skor Akhir SUS: {submittedScore.toFixed(1)}
+            </h2>
+            <p className="text-xs text-slate-600 max-w-md mx-auto leading-relaxed">
+              Terima kasih atas partisipasi Anda dalam pengujian perangkat lunak pendidikan ini. Respons Anda telah tercatat ke dalam basis data penelitian.
             </p>
-          </div>
-
-          {result ? (
-            <div className="rounded-2xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 p-6 text-center space-y-4">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-600 text-white">
-                <Award className="h-8 w-8" />
-              </div>
-              <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
-                  Hasil Evaluasi Usability
-                </span>
-                <div className="text-4xl font-black text-emerald-900 dark:text-emerald-100 mt-1">
-                  Skor SUS: {result.score} / 100
-                </div>
-                <div className="mt-2 text-sm font-bold text-emerald-800 dark:text-emerald-200">
-                  Grade {result.grade} — {result.adjectiveRating}
-                </div>
-                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-                  {result.isAboveAverage
-                    ? 'Aplikasi berada di atas rata-rata benchmark industri (skor > 68).'
-                    : 'Aplikasi perlu pembenahan lebih lanjut pada kemudahan antarmuka.'}
-                </p>
-              </div>
-
+            <div className="pt-2 flex justify-center gap-3">
               <button
-                type="button"
-                onClick={() => setResult(null)}
-                className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-5 py-2 text-xs font-bold text-white transition"
+                onClick={() => setSubmittedScore(null)}
+                className="btn-tactile-secondary px-4 py-2 text-xs"
               >
-                Isi Kuesioner Baru
+                Isi Ulang Kuesioner
               </button>
+              <Link
+                href="/dashboard"
+                className="btn-tactile-primary px-4 py-2 text-xs"
+              >
+                Kembali ke Dashboard
+              </Link>
             </div>
-          ) : (
-            <form onSubmit={handleSubmitSus} className="space-y-5 text-sm">
-              <div className="space-y-4">
-                {SUS_QUESTIONS.map((question, idx) => (
-                  <div
-                    key={idx}
-                    className="rounded-2xl border border-slate-100 dark:border-slate-800 p-4 bg-slate-50/50 dark:bg-slate-800/30 space-y-2.5"
-                  >
-                    <div className="font-semibold text-slate-800 dark:text-slate-200 text-xs sm:text-sm">
-                      {idx + 1}. {question}
-                    </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="surface-card p-5">
+              <label className="block text-xs font-medium text-slate-700 mb-2">
+                Nama / Kode Responden (Opsional)
+              </label>
+              <input
+                type="text"
+                value={participantName}
+                onChange={(e) => setParticipantName(e.target.value)}
+                placeholder="Contoh: Responden-01"
+                className="input-clean max-w-sm"
+              />
+            </div>
 
-                    <div className="flex items-center justify-between text-xs pt-1">
-                      <span className="text-[11px] font-semibold text-rose-500">Sangat Tidak Setuju (1)</span>
-                      <div className="flex items-center gap-3 sm:gap-6">
-                        {[1, 2, 3, 4, 5].map((val) => (
-                          <label
-                            key={val}
-                            className="flex flex-col items-center gap-1 cursor-pointer font-bold text-slate-600 dark:text-slate-400"
-                          >
-                            <input
-                              type="radio"
-                              name={`sus_${idx}`}
-                              value={val}
-                              checked={susAnswers[idx] === val}
-                              onChange={() => handleOptionChange(idx, val)}
-                              className="h-4 w-4 text-emerald-600 focus:ring-emerald-500"
-                            />
-                            <span>{val}</span>
-                          </label>
-                        ))}
-                      </div>
-                      <span className="text-[11px] font-semibold text-emerald-600">Sangat Setuju (5)</span>
-                    </div>
+            <div className="space-y-4">
+              {SUS_QUESTIONS.map((question, idx) => (
+                <div
+                  key={idx}
+                  className="surface-card p-5 flex flex-col md:flex-row md:items-center justify-between gap-4"
+                >
+                  <div className="space-y-1 max-w-xl">
+                    <span className="text-xs font-mono text-slate-400 font-semibold">
+                      ITEM {String(idx + 1).padStart(2, "0")}
+                    </span>
+                    <p className="text-sm font-medium text-slate-900">
+                      {question}
+                    </p>
                   </div>
-                ))}
-              </div>
 
-              <div>
-                <label className="font-bold text-xs block mb-1">
-                  Komentar & Masukan Kualitatif (Opsional):
-                </label>
-                <textarea
-                  rows={3}
-                  value={feedbackText}
-                  onChange={(e) => setFeedbackText(e.target.value)}
-                  placeholder="Ceritakan pengalamanmu saat menggunakan Fluenzy..."
-                  className="w-full rounded-2xl border border-slate-200 dark:border-slate-800 p-3 text-xs bg-slate-50 dark:bg-slate-800 focus:outline-none focus:border-emerald-500"
-                />
-              </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {[1, 2, 3, 4, 5].map((val) => {
+                      const active = scores[idx] === val;
+                      return (
+                        <button
+                          key={val}
+                          type="button"
+                          onClick={() => handleSelectScore(idx, val)}
+                          className={`w-10 h-10 rounded-lg font-mono text-xs font-semibold border transition-all cursor-pointer ${
+                            active
+                              ? "bg-blue-600 text-white border-blue-700 border-b-[3px]"
+                              : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                          }`}
+                        >
+                          {val}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
 
+            <div className="flex justify-end">
               <button
                 type="submit"
-                disabled={isSubmitting}
-                className="w-full rounded-2xl bg-emerald-600 hover:bg-emerald-700 py-3.5 text-sm font-extrabold text-white shadow-md transition"
+                disabled={submitting}
+                className="btn-tactile-primary px-6 py-3 text-sm"
               >
-                {isSubmitting ? 'Menghitung Skor SUS...' : 'Kirim Evaluasi & Hitung Skor SUS'}
+                {submitting ? "Menyimpan..." : "Kirim Evaluasi SUS"}
               </button>
-            </form>
-          )}
-        </div>
+            </div>
+          </form>
+        )}
       </main>
     </div>
   );

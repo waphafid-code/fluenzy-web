@@ -1,26 +1,39 @@
-'use client';
+"use client";
 
-import React, { Suspense } from 'react';
-import { SessionPlayer } from '@/components/SessionPlayer';
+import { useEffect, useState } from "react";
+import SessionPlayer, { QuestionItem } from "@/components/SessionPlayer";
 
-export default function SpacedReviewPracticePage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950 p-6">
-          <div className="text-center space-y-3">
-            <div className="inline-block h-10 w-10 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent" />
-            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
-              Menyiapkan review berjarak...
-            </p>
-          </div>
+export default function ReviewPracticePage() {
+  const [questions, setQuestions] = useState<QuestionItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/session/questions?mode=review")
+      .then((res) => res.json())
+      .then((data) => {
+        const list = Array.isArray(data) ? data : data?.questions || [];
+        setQuestions(list);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-6">
+        <div className="text-xs font-mono uppercase tracking-wider text-slate-500">
+          Menyiapkan antrean Spaced Repetition...
         </div>
-      }
-    >
-      <SessionPlayer
-        mode="review"
-        title="Review Harian (Sistem Kotak Leitner)"
-      />
-    </Suspense>
+      </div>
+    );
+  }
+
+  return (
+    <SessionPlayer
+      questions={questions}
+      sessionType="review"
+      title="Sesi Review Terjadwal"
+      subtitle="Penguatan memori jangka panjang berbasis Spaced Repetition"
+    />
   );
 }
