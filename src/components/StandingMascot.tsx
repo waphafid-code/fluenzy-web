@@ -41,7 +41,6 @@ export function StandingMascot({
   const [activeMood, setActiveMood] = useState<MascotMood>(mood);
   const [bubbleText, setBubbleText] = useState<string | null>(message || null);
   const [internalTalking, setInternalTalking] = useState(false);
-  const [mouthOpen, setMouthOpen] = useState(false);
 
   // Sinkronisasi mood dari props
   useEffect(() => {
@@ -54,22 +53,7 @@ export function StandingMascot({
     }
   }, [message]);
 
-  // Sinkronisasi animasi mulut berbicara
   const talkingNow = isTalking || internalTalking;
-
-  useEffect(() => {
-    if (!talkingNow) {
-      setMouthOpen(false);
-      return;
-    }
-
-    // Interval animasi mulut buka-tutup saat berbicara
-    const interval = setInterval(() => {
-      setMouthOpen((prev) => !prev);
-    }, 140);
-
-    return () => clearInterval(interval);
-  }, [talkingNow]);
 
   // Klik interaksi maskot
   function handleCharacterClick() {
@@ -154,20 +138,6 @@ export function StandingMascot({
             className="object-contain drop-shadow-md transition-all duration-200"
             priority
           />
-
-          {/* OVERLAY ANIMASI MULUT TERBUKA/TERTUTUP (SAAT BICARA) */}
-          {talkingNow && (
-            <div
-              className={`absolute left-[47%] top-[28%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-rose-900 border border-rose-400 transition-all duration-100 ${
-                mouthOpen ? 'w-4 h-3 scale-110' : 'w-2.5 h-1.5'
-              }`}
-            >
-              {/* Lidah / Gigi animasi */}
-              {mouthOpen && (
-                <div className="w-2 h-1 bg-rose-400 rounded-full mx-auto mt-1" />
-              )}
-            </div>
-          )}
 
           {/* EFEK PERAYAAN (SPARKLES & HEARTS) */}
           {activeMood === 'celebrate' && (
