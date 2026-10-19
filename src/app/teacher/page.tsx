@@ -186,52 +186,56 @@ export default function TeacherPortalPage() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 pb-16">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50/50 via-slate-50 to-purple-50/40 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 text-slate-900 dark:text-slate-100 pb-16 relative overflow-hidden">
+      {/* AMBIENT GLOW BLOBS */}
+      <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-indigo-400/15 dark:bg-indigo-500/10 blur-3xl pointer-events-none -z-10" />
+      <div className="absolute top-1/3 -right-32 w-96 h-96 rounded-full bg-purple-400/15 dark:bg-purple-500/10 blur-3xl pointer-events-none -z-10" />
+
       {/* Top Navigation */}
-      <header className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 sticky top-0 z-20">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
+      <header className="border-b-2 border-slate-200/80 dark:border-slate-800/80 bg-white/85 dark:bg-slate-900/85 backdrop-blur-md sticky top-0 z-20 shadow-xs">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">
             <Link
               href="/dashboard"
-              className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+              className="flex h-10 w-10 items-center justify-center rounded-2xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:border-slate-300 transition shadow-xs"
               title="Ke Dashboard Siswa"
             >
               <ArrowLeft className="h-5 w-5" />
             </Link>
             <div>
               <div className="flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-indigo-600 text-white text-xs font-bold">
+                <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-indigo-600 text-white text-xs font-black shadow-xs">
                   G
                 </span>
-                <h1 className="text-base font-extrabold text-slate-900 dark:text-slate-100">
+                <h1 className="text-base font-black text-slate-900 dark:text-slate-100">
                   Portal Guru & Kurikulum
                 </h1>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300">
+                <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-900 dark:bg-indigo-950 dark:text-indigo-200 border border-indigo-300">
                   Role: Teacher
                 </span>
               </div>
-              <p className="text-xs text-slate-500">Ibu Rahmawati, S.Pd. (guru@fluenzy.id)</p>
+              <p className="text-xs font-semibold text-slate-500">Ibu Rahmawati, S.Pd. (guru@fluenzy.id)</p>
             </div>
           </div>
 
           {/* Tab Navigation */}
-          <div className="flex items-center gap-1 rounded-xl bg-slate-100 dark:bg-slate-800 p-1 text-xs font-bold">
+          <div className="flex items-center gap-1 rounded-2xl bg-slate-100 dark:bg-slate-800 p-1 text-xs font-black border border-slate-200 dark:border-slate-700">
             <button
               onClick={() => setActiveTab('overview')}
-              className={`rounded-lg px-4 py-1.5 transition ${
+              className={`rounded-xl px-4 py-1.5 transition ${
                 activeTab === 'overview'
-                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm'
-                  : 'text-slate-500'
+                  ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm border border-slate-200 dark:border-slate-700'
+                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
               Laporan Kelas
             </button>
             <button
               onClick={() => setActiveTab('questions')}
-              className={`rounded-lg px-4 py-1.5 transition ${
+              className={`rounded-xl px-4 py-1.5 transition ${
                 activeTab === 'questions'
-                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm'
-                  : 'text-slate-500'
+                  ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm border border-slate-200 dark:border-slate-700'
+                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
               Bank Soal ({questions.length})
@@ -248,16 +252,16 @@ export default function TeacherPortalPage() {
           <div className="space-y-6">
             {/* Metrik Utama Kelas */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 shadow-sm">
-                <span className="text-xs font-semibold text-slate-500 block mb-1">Total Siswa Terdaftar</span>
+              <div className="rounded-3xl bg-white/95 dark:bg-slate-900/90 border-2 border-slate-200/90 dark:border-slate-800 p-6 shadow-xl backdrop-blur-md">
+                <span className="text-xs font-black text-slate-500 block mb-1">Total Siswa Terdaftar</span>
                 <div className="text-3xl font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
                   <Users className="h-7 w-7 text-indigo-500" />
                   {overview?.totalStudents || 0} Siswa
                 </div>
               </div>
 
-              <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 shadow-sm">
-                <span className="text-xs font-semibold text-slate-500 block mb-1">Total Bank Soal Aktif</span>
+              <div className="rounded-3xl bg-white/95 dark:bg-slate-900/90 border-2 border-slate-200/90 dark:border-slate-800 p-6 shadow-xl backdrop-blur-md">
+                <span className="text-xs font-black text-slate-500 block mb-1">Total Bank Soal Aktif</span>
                 <div className="text-3xl font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
                   <BookOpen className="h-7 w-7 text-emerald-500" />
                   {overview?.totalQuestions || 0} Soal

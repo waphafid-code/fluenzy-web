@@ -73,14 +73,20 @@ export default function MistakesReviewPage() {
       : skills.filter((s) => s.skillId === selectedSkillFilter);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 pb-16">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50/50 via-slate-50 to-rose-50/40 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 text-slate-900 dark:text-slate-100 pb-16 relative overflow-hidden">
+      {/* AMBIENT GLOW BLOBS */}
+      <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-rose-400/15 dark:bg-rose-500/10 blur-3xl pointer-events-none -z-10" />
+      <div className="absolute top-1/3 -right-32 w-96 h-96 rounded-full bg-indigo-400/15 dark:bg-indigo-500/10 blur-3xl pointer-events-none -z-10" />
+      <div className="absolute -bottom-32 left-1/3 w-96 h-96 rounded-full bg-amber-400/15 dark:bg-amber-500/10 blur-3xl pointer-events-none -z-10" />
+
       {/* Header Bar */}
-      <header className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 sticky top-0 z-20">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4 sm:px-6">
+      <header className="border-b-2 border-slate-200/80 dark:border-slate-800/80 bg-white/85 dark:bg-slate-900/85 backdrop-blur-md sticky top-0 z-20 shadow-xs">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">
             <Link
               href="/dashboard"
-              className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+              className="flex h-10 w-10 items-center justify-center rounded-2xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:border-slate-300 transition shadow-xs"
+              title="Kembali ke Dashboard"
             >
               <ArrowLeft className="h-5 w-5" />
             </Link>
@@ -89,7 +95,7 @@ export default function MistakesReviewPage() {
                 <BookOpen className="h-5 w-5 text-indigo-500" />
                 Review Kesalahan & Pembahasan
               </h1>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs font-semibold text-slate-500">
                 Total {data?.totalMistakes || 0} kekeliruan yang pernah tercatat
               </p>
             </div>
@@ -97,7 +103,7 @@ export default function MistakesReviewPage() {
 
           <Link
             href="/practice/weakness"
-            className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 px-4 py-2 text-xs font-bold text-white shadow-sm transition"
+            className="inline-flex items-center gap-2 rounded-2xl bg-amber-500 hover:bg-amber-600 border-b-4 border-amber-700 active:translate-y-1 active:border-b-0 px-4 py-2 text-xs font-black text-white shadow-md transition"
           >
             <Sparkles className="h-3.5 w-3.5" />
             Latihan Remedial
@@ -109,15 +115,15 @@ export default function MistakesReviewPage() {
         {/* Filter per Skill */}
         {skills.length > 0 && (
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-semibold text-slate-500 flex items-center gap-1 mr-1">
-              <Filter className="h-3.5 w-3.5" /> Filter Materi:
+            <span className="text-xs font-bold text-slate-500 flex items-center gap-1 mr-1">
+              <Filter className="h-3.5 w-3.5 text-indigo-500" /> Filter Materi:
             </span>
             <button
               onClick={() => setSelectedSkillFilter('ALL')}
-              className={`rounded-xl px-3 py-1.5 text-xs font-bold transition ${
+              className={`rounded-2xl px-3.5 py-1.5 text-xs font-black transition-all ${
                 selectedSkillFilter === 'ALL'
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
+                  ? 'bg-indigo-600 text-white shadow-md border-b-2 border-indigo-800'
+                  : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-2 border-slate-200 dark:border-slate-800 hover:border-indigo-400'
               }`}
             >
               Semua ({data?.totalMistakes})
@@ -126,10 +132,10 @@ export default function MistakesReviewPage() {
               <button
                 key={s.skillId}
                 onClick={() => setSelectedSkillFilter(s.skillId)}
-                className={`rounded-xl px-3 py-1.5 text-xs font-bold transition ${
+                className={`rounded-2xl px-3.5 py-1.5 text-xs font-black transition-all ${
                   selectedSkillFilter === s.skillId
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
+                    ? 'bg-indigo-600 text-white shadow-md border-b-2 border-indigo-800'
+                    : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-2 border-slate-200 dark:border-slate-800 hover:border-indigo-400'
                 }`}
               >
                 {s.skillName} ({s.totalMistakes})
@@ -140,12 +146,12 @@ export default function MistakesReviewPage() {
 
         {/* Daftar Kesalahan */}
         {filteredSkills.length === 0 ? (
-          <div className="rounded-3xl bg-white dark:bg-slate-900 p-12 text-center border border-slate-200 dark:border-slate-800">
+          <div className="rounded-3xl bg-white/95 dark:bg-slate-900/90 p-12 text-center border-2 border-slate-200/90 dark:border-slate-800 shadow-xl backdrop-blur-md">
             <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-500 mb-3" />
-            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+            <h3 className="text-lg font-black text-slate-900 dark:text-slate-100">
               Tidak Ada Rekaman Kesalahan!
             </h3>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm font-medium text-slate-500">
               Hebat! Kamu belum memiliki catatan jawaban salah pada kategori ini.
             </p>
           </div>
@@ -153,19 +159,19 @@ export default function MistakesReviewPage() {
           filteredSkills.map((group) => (
             <div
               key={group.skillId}
-              className="rounded-3xl bg-white dark:bg-slate-900 p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-5"
+              className="rounded-3xl bg-white/95 dark:bg-slate-900/90 p-6 sm:p-7 border-2 border-slate-200/90 dark:border-slate-800 shadow-xl space-y-6 backdrop-blur-md"
             >
               {/* Header Skill Group */}
-              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
-                <div className="flex items-center gap-2.5">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-600">
-                    <Brain className="h-4 w-4" />
+              <div className="flex items-center justify-between border-b-2 border-slate-100 dark:border-slate-800 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-100 dark:bg-indigo-950 text-indigo-600 border border-indigo-200 dark:border-indigo-800 shadow-xs">
+                    <Brain className="h-5 w-5" />
                   </div>
                   <div>
-                    <h3 className="font-extrabold text-base text-slate-900 dark:text-slate-100">
+                    <h3 className="font-black text-lg text-slate-900 dark:text-slate-100">
                       {group.skillName}
                     </h3>
-                    <span className="text-xs text-slate-500">
+                    <span className="text-xs font-semibold text-slate-500">
                       {group.totalMistakes} kali kesalahan tercatat
                     </span>
                   </div>
@@ -173,16 +179,16 @@ export default function MistakesReviewPage() {
               </div>
 
               {/* Kelompokkan per ErrorType */}
-              <div className="space-y-4">
+              <div className="space-y-5">
                 {Object.values(group.byErrorType).map((errGroup) => {
                   const errorLabel = ERROR_TYPE_LABELS[errGroup.errorType] || errGroup.errorType;
                   return (
                     <div key={errGroup.errorType} className="space-y-3">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-black uppercase tracking-wider px-2.5 py-0.5 rounded-md bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300">
+                        <span className="text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border border-rose-300 dark:border-rose-800 shadow-xs">
                           {errorLabel}
                         </span>
-                        <span className="text-xs text-slate-400">({errGroup.items.length} butir)</span>
+                        <span className="text-xs font-bold text-slate-400">({errGroup.items.length} butir)</span>
                       </div>
 
                       {/* Kartu Soal dan Pembahasan */}
@@ -190,34 +196,35 @@ export default function MistakesReviewPage() {
                         {errGroup.items.map((item) => (
                           <div
                             key={item.logId}
-                            className="rounded-2xl border border-slate-200 dark:border-slate-800 p-4 bg-slate-50/50 dark:bg-slate-800/40 space-y-2 text-sm"
+                            className="rounded-2xl border-2 border-slate-200/90 dark:border-slate-800 p-5 bg-slate-50/60 dark:bg-slate-800/40 space-y-3 text-sm shadow-xs"
                           >
-                            <h4 className="font-bold text-slate-900 dark:text-slate-100 text-base">
+                            <h4 className="font-black text-slate-900 dark:text-slate-100 text-base leading-snug">
                               {item.prompt}
                             </h4>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs pt-1">
-                              <div className="rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 p-3">
-                                <span className="font-bold text-rose-700 dark:text-rose-300 block mb-0.5">
-                                  Jawabanmu yang salah:
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs pt-1">
+                              <div className="rounded-2xl bg-rose-50/80 dark:bg-rose-950/50 border-2 border-rose-200 dark:border-rose-900 p-3.5">
+                                <span className="font-black text-rose-700 dark:text-rose-300 block mb-1">
+                                  Jawabanmu yang keliru:
                                 </span>
-                                <span className="text-rose-900 dark:text-rose-200 font-semibold line-through">
+                                <span className="text-rose-900 dark:text-rose-200 font-bold line-through">
                                   {item.userAnswer || '(kosong)'}
                                 </span>
                               </div>
 
-                              <div className="rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-900 p-3">
-                                <span className="font-bold text-emerald-700 dark:text-emerald-300 block mb-0.5">
+                              <div className="rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/50 border-2 border-emerald-200 dark:border-emerald-900 p-3.5">
+                                <span className="font-black text-emerald-700 dark:text-emerald-300 block mb-1">
                                   Kunci Jawaban yang Benar:
                                 </span>
-                                <span className="text-emerald-900 dark:text-emerald-200 font-bold">
+                                <span className="text-emerald-900 dark:text-emerald-200 font-black">
                                   {item.correctAnswer}
                                 </span>
                               </div>
                             </div>
 
-                            <div className="text-xs text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 mt-2">
-                              <span className="font-bold text-slate-800 dark:text-slate-200 block mb-0.5">
+                            <div className="text-xs text-slate-700 dark:text-slate-300 bg-white/90 dark:bg-slate-900/90 p-4 rounded-2xl border-2 border-slate-200 dark:border-slate-800 mt-2 leading-relaxed">
+                              <span className="font-black text-slate-900 dark:text-slate-100 block mb-1 flex items-center gap-1.5">
+                                <Sparkles className="h-3.5 w-3.5 text-indigo-500" />
                                 Penjelasan Kaidah:
                               </span>
                               {item.explanation}

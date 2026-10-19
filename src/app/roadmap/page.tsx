@@ -178,14 +178,20 @@ export default function RoadmapPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col justify-between">
+    <div className="min-h-screen bg-gradient-to-br from-sky-50/50 via-slate-50 to-emerald-50/50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 text-slate-900 dark:text-slate-100 flex flex-col justify-between relative overflow-hidden">
+      {/* AMBIENT GLOW BLOBS */}
+      <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-sky-400/15 dark:bg-sky-500/10 blur-3xl pointer-events-none -z-10" />
+      <div className="absolute top-1/3 -right-32 w-96 h-96 rounded-full bg-emerald-400/15 dark:bg-emerald-500/10 blur-3xl pointer-events-none -z-10" />
+      <div className="absolute top-2/3 left-10 w-96 h-96 rounded-full bg-purple-400/10 dark:bg-purple-500/10 blur-3xl pointer-events-none -z-10" />
+      <div className="absolute -bottom-32 right-1/4 w-96 h-96 rounded-full bg-amber-400/15 dark:bg-amber-500/10 blur-3xl pointer-events-none -z-10" />
+
       {/* 1. TOP APP BAR */}
-      <header className="sticky top-0 z-30 border-b border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md">
+      <header className="sticky top-0 z-30 border-b-2 border-slate-200/80 dark:border-slate-800/80 bg-white/85 dark:bg-slate-900/85 backdrop-blur-md shadow-xs">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">
             <Link
               href="/dashboard"
-              className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+              className="flex h-10 w-10 items-center justify-center rounded-2xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:border-slate-300 transition shadow-xs"
               title="Kembali ke Dashboard"
             >
               <ChevronLeft className="h-5 w-5" />
@@ -195,42 +201,42 @@ export default function RoadmapPage() {
                 <h1 className="text-lg font-black tracking-tight text-slate-900 dark:text-slate-100">
                   Roadmap Pembelajaran
                 </h1>
-                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
                   50 Stages
                 </span>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
                 Pilih jalur kompetensi dan taklukkan setiap milestone!
               </p>
             </div>
           </div>
 
-          {/* Quick Stats Pill */}
-          <div className="flex items-center gap-3 text-xs font-black">
-            <div className="flex items-center gap-1 text-amber-500 bg-amber-50 dark:bg-amber-950/60 px-2.5 py-1.5 rounded-xl border border-amber-200 dark:border-amber-900">
+          {/* Quick Stats Pill with Tactile Depth */}
+          <div className="flex items-center gap-2 sm:gap-3 text-xs font-black">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-amber-50 dark:bg-amber-950/70 border-2 border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 shadow-xs">
               <Flame className="h-4 w-4 fill-amber-500" />
               <span>14 Hari</span>
             </div>
-            <div className="flex items-center gap-1 text-sky-500 bg-sky-50 dark:bg-sky-950/60 px-2.5 py-1.5 rounded-xl border border-sky-200 dark:border-sky-900">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-sky-50 dark:bg-sky-950/70 border-2 border-sky-300 dark:border-sky-800 text-sky-900 dark:text-sky-200 shadow-xs">
               <Gem className="h-4 w-4 fill-sky-500" />
               <span>240</span>
             </div>
-            <div className="flex items-center gap-1 text-rose-500 bg-rose-50 dark:bg-rose-950/60 px-2.5 py-1.5 rounded-xl border border-rose-200 dark:border-rose-900">
-              <Heart className="h-4 w-4 fill-rose-500" />
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-rose-50 dark:bg-rose-950/70 border-2 border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-200 shadow-xs">
+              <Heart className="h-4 w-4 fill-rose-500 animate-pulse" />
               <span>5</span>
             </div>
           </div>
         </div>
 
         {/* 2. TRACK SWITCHER TABS (Membaca, Menulis, Mendengar, Berbicara) */}
-        <div className="border-t border-slate-200/80 dark:border-slate-800/80 bg-slate-100/60 dark:bg-slate-900/40">
+        <div className="border-t border-slate-200/80 dark:border-slate-800/80 bg-slate-100/70 dark:bg-slate-900/60">
           <div className="mx-auto flex max-w-5xl items-center justify-around sm:justify-start sm:gap-2 px-3 py-2 overflow-x-auto no-scrollbar">
             {(
               [
-                { key: 'reading', label: 'Membaca (Reading)', icon: BookOpen },
-                { key: 'writing', label: 'Menulis (Writing)', icon: PenTool },
-                { key: 'listening', label: 'Mendengarkan (Listening)', icon: Headphones },
-                { key: 'speaking', label: 'Berbicara (Speaking)', icon: Mic },
+                { key: 'reading', label: 'Membaca (Reading)', icon: BookOpen, activeColor: 'text-emerald-500' },
+                { key: 'writing', label: 'Menulis (Writing)', icon: PenTool, activeColor: 'text-indigo-500' },
+                { key: 'listening', label: 'Mendengarkan (Listening)', icon: Headphones, activeColor: 'text-purple-500' },
+                { key: 'speaking', label: 'Berbicara (Speaking)', icon: Mic, activeColor: 'text-amber-500' },
               ] as const
             ).map((t) => {
               const Icon = t.icon;
@@ -245,11 +251,11 @@ export default function RoadmapPage() {
                   }}
                   className={`flex items-center gap-2 rounded-2xl px-4 py-2 text-xs font-black transition-all whitespace-nowrap ${
                     isActive
-                      ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-sm border border-slate-300 dark:border-slate-700 scale-[1.02]'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-slate-800/50'
+                      ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-md border-2 border-slate-300 dark:border-slate-600 scale-[1.02]'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-white/60 dark:hover:bg-slate-800/60'
                   }`}
                 >
-                  <Icon className={`h-4 w-4 ${isActive ? 'text-emerald-500' : 'text-slate-400'}`} />
+                  <Icon className={`h-4 w-4 ${isActive ? t.activeColor : 'text-slate-400'}`} />
                   <span>{t.label}</span>
                 </button>
               );
@@ -262,27 +268,27 @@ export default function RoadmapPage() {
       <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col items-center px-4 py-8">
         {/* Banner Track Aktif */}
         <div
-          className={`w-full rounded-3xl bg-gradient-to-r ${trackInfo.accentBg} p-6 text-white shadow-lg mb-8 flex flex-col sm:flex-row items-center justify-between gap-4`}
+          className={`w-full rounded-3xl bg-gradient-to-r ${trackInfo.accentBg} p-7 text-white shadow-xl mb-8 flex flex-col sm:flex-row items-center justify-between gap-5 border-2 border-white/20`}
         >
-          <div className="space-y-1 text-center sm:text-left">
-            <span className="text-xs font-bold uppercase tracking-wider text-white/80">
+          <div className="space-y-1.5 text-center sm:text-left">
+            <span className="text-xs font-black uppercase tracking-wider text-white/80 bg-white/20 px-3 py-1 rounded-full">
               Jalur Pembelajaran Aktif
             </span>
-            <h2 className="text-2xl font-black">{trackInfo.name}</h2>
-            <p className="text-xs text-white/90 max-w-md">
+            <h2 className="text-2xl sm:text-3xl font-black">{trackInfo.name}</h2>
+            <p className="text-xs font-semibold text-white/90 max-w-md leading-relaxed">
               Selesaikan 50 tahapan kurikulum berurutan untuk mencapai kemahiran penuh (CEFR B2 Level).
             </p>
           </div>
 
           {/* Progress Bar Mini */}
-          <div className="rounded-2xl bg-black/20 backdrop-blur-sm p-4 text-center sm:text-right shrink-0">
+          <div className="rounded-2xl bg-black/25 backdrop-blur-md p-4 text-center sm:text-right shrink-0 border border-white/20">
             <div className="text-xs font-bold text-white/80">Progres Keseluruhan</div>
             <div className="text-2xl font-black mt-0.5">
               {currentProgressStage - 1} / 50 <span className="text-xs font-medium text-white/70">Stage</span>
             </div>
-            <div className="w-32 h-2 bg-white/30 rounded-full mt-2 overflow-hidden">
+            <div className="w-36 h-2.5 bg-white/30 rounded-full mt-2 overflow-hidden p-0.5">
               <div
-                className="h-full bg-white rounded-full transition-all"
+                className="h-full bg-white rounded-full transition-all duration-500"
                 style={{ width: `${((currentProgressStage - 1) / 50) * 100}%` }}
               />
             </div>
@@ -299,13 +305,23 @@ export default function RoadmapPage() {
 
             const isFirstOfUnit = idx === 0 || stages[idx - 1].unit !== stage.unit;
 
+            // Unit theme color palette
+            const unitPalettes = [
+              'bg-emerald-500 border-emerald-700 text-white',
+              'bg-indigo-500 border-indigo-700 text-white',
+              'bg-purple-500 border-purple-700 text-white',
+              'bg-amber-500 border-amber-700 text-white',
+              'bg-rose-500 border-rose-700 text-white',
+            ];
+            const currentUnitTheme = unitPalettes[(stage.unit - 1) % unitPalettes.length];
+
             return (
               <React.Fragment key={stage.id}>
                 {/* UNIT HEADER SEPARATOR */}
                 {isFirstOfUnit && (
                   <div className="w-full my-6 text-center">
-                    <div className="inline-flex items-center gap-2 rounded-2xl bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 px-6 py-2.5 shadow-sm">
-                      <Trophy className="h-4 w-4 text-amber-500" />
+                    <div className="inline-flex items-center gap-2 rounded-2xl bg-white/95 dark:bg-slate-900/95 border-2 border-slate-300 dark:border-slate-700 px-6 py-3 shadow-md backdrop-blur-md">
+                      <Trophy className="h-5 w-5 text-amber-500" />
                       <span className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">
                         {stage.unitTitle}
                       </span>
@@ -331,7 +347,7 @@ export default function RoadmapPage() {
                     </div>
                   )}
 
-                  {/* TOMBOL NODE STAGE (3D DUOLINGO STYLE) */}
+                  {/* TOMBOL NODE STAGE (3D DUOLINGO CLAYMOPHISM) */}
                   <button
                     type="button"
                     onClick={() => {
@@ -340,9 +356,9 @@ export default function RoadmapPage() {
                     }}
                     className={`group relative flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-full border-b-4 font-black transition-all active:translate-y-1 active:border-b-0 ${
                       isCompleted
-                        ? 'bg-amber-400 hover:bg-amber-300 border-amber-600 text-amber-950 shadow-md'
+                        ? 'bg-gradient-to-b from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 border-amber-700 text-amber-950 shadow-md ring-2 ring-amber-200 dark:ring-amber-900'
                         : isCurrent
-                        ? 'bg-emerald-500 hover:bg-emerald-400 border-emerald-700 text-white shadow-xl ring-4 ring-emerald-300/50 animate-pulse'
+                        ? 'bg-gradient-to-b from-emerald-400 to-emerald-600 hover:from-emerald-300 hover:to-emerald-500 border-emerald-800 text-white shadow-xl ring-4 ring-emerald-300/60 dark:ring-emerald-700/60 animate-pulse'
                         : 'bg-slate-200 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-400 cursor-not-allowed opacity-80'
                     }`}
                   >
@@ -362,7 +378,7 @@ export default function RoadmapPage() {
                     )}
 
                     {/* Badge Nomor Stage */}
-                    <span className="absolute -bottom-2 rounded-full bg-slate-900/80 px-2 py-0.5 text-[10px] font-bold text-white shadow-xs">
+                    <span className="absolute -bottom-2 rounded-full bg-slate-900 px-2.5 py-0.5 text-[10px] font-black text-white shadow-xs border border-white/20">
                       #{stage.id}
                     </span>
                   </button>
@@ -375,16 +391,16 @@ export default function RoadmapPage() {
 
       {/* 5. MODAL POPUP DETAIL STAGE */}
       {selectedStage && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-md rounded-3xl bg-white dark:bg-slate-900 p-6 sm:p-8 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 backdrop-blur-md p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-md rounded-3xl bg-white dark:bg-slate-900 p-6 sm:p-8 shadow-2xl border-2 border-slate-200 dark:border-slate-800 space-y-6">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+              <span className="text-xs font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-3 py-1 rounded-full">
                 Stage {selectedStage.id} • {trackInfo.name}
               </span>
               <button
                 type="button"
                 onClick={() => setSelectedStage(null)}
-                className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
               >
                 ✕
               </button>
@@ -394,21 +410,21 @@ export default function RoadmapPage() {
               <h3 className="text-2xl font-black text-slate-900 dark:text-slate-100">
                 {selectedStage.title}
               </h3>
-              <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+              <p className="text-sm font-medium text-slate-600 dark:text-slate-400 leading-relaxed">
                 {selectedStage.desc}
               </p>
             </div>
 
-            <div className="rounded-2xl bg-slate-50 dark:bg-slate-800/60 p-4 border border-slate-200 dark:border-slate-700/60 flex items-center justify-between text-xs font-bold">
+            <div className="rounded-2xl bg-slate-50 dark:bg-slate-800/60 p-4 border-2 border-slate-200 dark:border-slate-700 flex items-center justify-between text-xs font-bold">
               <span className="text-slate-500">Materi Terkait:</span>
-              <span className="text-emerald-600 dark:text-emerald-400">{selectedStage.unitTitle}</span>
+              <span className="text-emerald-600 dark:text-emerald-400 font-black">{selectedStage.unitTitle}</span>
             </div>
 
             <div className="flex flex-col gap-3">
               <Link
                 href={`/learn/lesson-${((selectedStage.id - 1) % 5) + 1}`}
                 onClick={() => playBubblePop()}
-                className="w-full flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 hover:bg-emerald-700 border-b-4 border-emerald-800 py-3.5 text-sm font-extrabold text-white shadow-md transition active:translate-y-1 active:border-b-0"
+                className="w-full flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 hover:bg-emerald-700 border-b-4 border-emerald-800 py-4 text-sm font-black text-white shadow-lg transition active:translate-y-1 active:border-b-0"
               >
                 <Play className="h-4 w-4 fill-white" />
                 Mulai Latihan Sesi Ini
@@ -416,7 +432,7 @@ export default function RoadmapPage() {
               <button
                 type="button"
                 onClick={() => setSelectedStage(null)}
-                className="w-full rounded-2xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 py-3 text-xs font-bold text-slate-700 dark:text-slate-300 transition"
+                className="w-full rounded-2xl border-2 border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 py-3 text-xs font-bold text-slate-700 dark:text-slate-300 transition"
               >
                 Tutup
               </button>
