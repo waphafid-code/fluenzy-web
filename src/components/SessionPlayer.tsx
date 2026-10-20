@@ -31,6 +31,9 @@ import {
   speakText,
   speakWord,
   speakTurtleMode,
+  speakBilingualText,
+  extractEnglishTarget,
+  stopSpeech,
   playBubblePop,
   playCelebrationSound,
 } from '@/lib/audio/speech';
@@ -73,6 +76,8 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
   const [speechRate, setSpeechRate] = useState<number>(0.95);
   const [isTurtleMode, setIsTurtleMode] = useState<boolean>(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState<boolean>(false);
+  const [isPlayingTargetOnly, setIsPlayingTargetOnly] = useState<boolean>(false);
+  const [isPlayingExplanation, setIsPlayingExplanation] = useState<boolean>(false);
   const [isPersonalizationOpen, setIsPersonalizationOpen] = useState(false);
 
   useEffect(() => {
@@ -156,10 +161,13 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
   useEffect(() => {
     if (!currentQ) return;
     startTimeRef.current = Date.now();
+    stopSpeech();
     setSelectedOption('');
     setTextAnswer('');
     setFeedback(null);
     setIsPlayingAudio(false);
+    setIsPlayingTargetOnly(false);
+    setIsPlayingExplanation(false);
 
     // Siapkan token untuk word_order
     if (currentQ.type === 'word_order') {
@@ -182,21 +190,58 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
   }, [currentIndex, currentQ, companion]);
 
   // Audio Playback
+  // Audio Playback: Memutar soal dengan transisi bahasa yang tepat
   function handlePlayAudio() {
     if (!currentQ) return;
     playBubblePop();
     setIsPlayingAudio(true);
+    setIsPlayingTargetOnly(false);
     const textToSpeak = currentQ.prompt;
     if (isTurtleMode) {
       speakTurtleMode(textToSpeak, {
         onEnd: () => setIsPlayingAudio(false),
       });
     } else {
-      speakText(textToSpeak, {
+      speakBilingualText(textToSpeak, {
         rate: speechRate,
         onEnd: () => setIsPlayingAudio(false),
       });
     }
+  }
+
+  // Audio Playback: Hanya memutar target kalimat bahasa Inggris
+  function handlePlayTargetOnly() {
+    if (!currentQ) return;
+    const target = extractEnglishTarget(currentQ.prompt);
+    if (!target) {
+      handlePlayAudio();
+      return;
+    }
+    playBubblePop();
+    setIsPlayingTargetOnly(true);
+    setIsPlayingAudio(false);
+    speakText(target, {
+      lang: 'en-US',
+      rate: isTurtleMode ? 0.65 : speechRate,
+      onEnd: () => setIsPlayingTargetOnly(false),
+    });
+  }
+
+  // Audio Playback: Memutar penjelasan kaidah bilingual
+  function handlePlayExplanation(explanationText?: string) {
+    if (!explanationText) return;
+    if (isPlayingExplanation) {
+      stopSpeech();
+      setIsPlayingExplanation(false);
+      return;
+    }
+    playBubblePop();
+    setIsPlayingExplanation(true);
+    speakBilingualText(explanationText, {
+      rate: speechRate,
+      onStart: () => setIsPlayingExplanation(true),
+      onEnd: () => setIsPlayingExplanation(false),
+    });
   }
 
   // Kirim Jawaban
@@ -256,6 +301,10 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
 
   // Lanjut ke soal berikutnya
   function handleNextQuestion() {
+    stopSpeech();
+    setIsPlayingAudio(false);
+    setIsPlayingTargetOnly(false);
+    setIsPlayingExplanation(false);
     if (currentIndex + 1 < questions.length) {
       playBubblePop();
       setCurrentIndex((prev) => prev + 1);
@@ -513,7 +562,7 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
               type="button"
               onClick={handlePlayAudio}
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold shadow-[0_0_15px_rgba(0,210,255,0.4)] transition cursor-pointer"
-              title="Putar Audio"
+              title="Putar Audio Soal Lengkap"
             >
               {isPlayingAudio ? (
                 <Pause className="h-5 w-5" />
@@ -527,20 +576,82 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
               {[40, 70, 85, 55, 95, 65, 45, 80, 60, 35, 75, 90, 50, 65, 80, 40].map((h, i) => (
                 <div
                   key={i}
-                  style={{ height: isPlayingAudio ? `${h}%` : '25%' }}
+                  style={{ height: isPlayingAudio || isPlayingTargetOnly ? `${h}%` : '25%' }}
                   className={`flex-1 rounded-full transition-all duration-150 ${
-                    isPlayingAudio ? 'bg-cyan-400 shadow-[0_0_6px_rgba(0,210,255,0.5)]' : 'bg-slate-700'
+                    isPlayingAudio || isPlayingTargetOnly
+                      ? 'bg-cyan-400 shadow-[0_0_6px_rgba(0,210,255,0.5)]'
+                      : 'bg-slate-700'
                   }`}
                 />
               ))}
             </div>
 
-            <span className="text-xs font-mono text-slate-400">1:24</span>
+            <span className="text-xs font-mono text-slate-400">Audio Drill</span>
           </div>
 
-          <h2 className="text-lg sm:text-xl font-bold text-white pt-1">
-            {currentQ.prompt}
-          </h2>
+          {/* VISUAL BILINGUAL SEPARATION (Indonesia Instruction vs English Target) */}
+          {(() => {
+            const rawPrompt = currentQ.prompt || '';
+            const quoteMatch = /^(.*?)(["'“‘`][^"'”’`]+["'”’`])(.*)$/.exec(rawPrompt);
+            const colonMatch = !quoteMatch && rawPrompt.includes(':') ? rawPrompt.split(':') : null;
+
+            let instruction = '';
+            let target = rawPrompt;
+            let suffix = '';
+
+            if (quoteMatch) {
+              instruction = quoteMatch[1].replace(/[:\-–—]+$/, '').trim();
+              target = quoteMatch[2].replace(/^["'“‘`]|["'”’`]$/g, '').trim();
+              suffix = quoteMatch[3].replace(/^[:\-–—]+/, '').trim();
+            } else if (colonMatch) {
+              instruction = colonMatch[0].trim();
+              target = colonMatch.slice(1).join(':').trim();
+            }
+
+            return (
+              <div className="space-y-2 pt-1">
+                {instruction && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-300 border border-amber-500/30 shrink-0">
+                      🇮🇩 Petunjuk
+                    </span>
+                    <span className="text-xs sm:text-sm font-semibold text-slate-300">
+                      {instruction}
+                    </span>
+                  </div>
+                )}
+
+                <div className="p-4 rounded-xl bg-gradient-to-r from-cyan-950/40 via-[#0A1520] to-[#0A131C] border border-cyan-500/40 shadow-[0_0_15px_rgba(0,210,255,0.1)]">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
+                      🇬🇧 Target English
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handlePlayTargetOnly}
+                      className={`text-[11px] font-bold px-2.5 py-1 rounded-md border transition flex items-center gap-1.5 cursor-pointer ${
+                        isPlayingTargetOnly
+                          ? 'bg-cyan-400 text-slate-950 border-cyan-400 shadow-[0_0_10px_rgba(0,210,255,0.5)]'
+                          : 'bg-[#102231] hover:bg-[#162D42] text-cyan-300 border-cyan-500/30'
+                      }`}
+                      title="Dengarkan pengucapan kalimat bahasa Inggris murni"
+                    >
+                      <Volume2 className="h-3.5 w-3.5" />
+                      <span>{isPlayingTargetOnly ? 'Memutar English...' : 'Dengar English Saja'}</span>
+                    </button>
+                  </div>
+                  <h2 className="text-lg sm:text-xl font-bold font-mono text-white tracking-wide">
+                    {target}
+                    {suffix && (
+                      <span className="text-xs font-sans text-slate-400 ml-2">
+                        {suffix}
+                      </span>
+                    )}
+                  </h2>
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* QUESTION INPUTS (MULTIPLE CHOICE, WORD ORDER, OR FILL BLANK) */}
@@ -682,7 +793,7 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
 
             <div className="flex-1 text-left">
               {feedback ? (
-                <div className="space-y-0.5">
+                <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     {feedback.isCorrect ? (
                       <>
@@ -703,9 +814,39 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
                     )}
                   </div>
                   {!feedback.isCorrect && (
-                    <div className="text-[11px] text-slate-300 leading-tight">
+                    <div className="text-xs text-slate-300 leading-tight">
                       <span className="font-bold text-emerald-400">Jawaban benar: </span>
-                      {feedback.correctAnswer}
+                      <span className="font-mono font-bold text-white px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-500/40">
+                        {feedback.correctAnswer}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Penjelasan Kaidah Cerdas Bilingual */}
+                  {feedback.explanation && (
+                    <div className="p-3 rounded-xl bg-[#091522] border border-cyan-500/30 text-slate-200 text-xs space-y-1.5 shadow-md">
+                      <div className="flex items-center justify-between">
+                        <span className="flex items-center gap-1.5 font-black text-cyan-400 text-[11px]">
+                          <Sparkles className="h-3.5 w-3.5 text-cyan-400" />
+                          Penjelasan Kaidah:
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handlePlayExplanation(feedback.explanation)}
+                          className={`flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-lg border transition cursor-pointer ${
+                            isPlayingExplanation
+                              ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                              : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40 hover:bg-cyan-500/30'
+                          }`}
+                          title="Dengarkan penjelasan suara bilingual"
+                        >
+                          <Volume2 className="h-3.5 w-3.5" />
+                          <span>{isPlayingExplanation ? 'Hentikan Suara' : 'Dengar Penjelasan'}</span>
+                        </button>
+                      </div>
+                      <p className="text-slate-300 text-xs leading-relaxed font-sans">
+                        {feedback.explanation}
+                      </p>
                     </div>
                   )}
                 </div>

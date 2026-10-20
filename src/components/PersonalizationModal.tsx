@@ -21,7 +21,7 @@ import {
   AudioSpeedChoice,
   COMPANIONS,
 } from '@/lib/core/preferences';
-import { speakText, playBubblePop } from '@/lib/audio/speech';
+import { speakText, speakBilingualText, playBubblePop } from '@/lib/audio/speech';
 
 interface PersonalizationModalProps {
   isOpen: boolean;
@@ -56,9 +56,9 @@ export function PersonalizationModal({
     playBubblePop();
     const isLily = prefs.mascot === 'lily' || prefs.mascot === 'girl';
     const sampleText = isLily
-      ? "Halo! Saya Lily, AI Peer dan Speaking Coach kamu. Ayo lanjutkan petualangan belajarmu hari ini!"
-      : "Halo! Saya Arthur, Tech Lead dan Diagnostic Mentor kamu. Kamu semakin dekat dengan tujuanmu!";
-    speakText(sampleText, { rate: speed });
+      ? 'Halo! Saya Lily, AI Peer kamu. Let\'s practice English together!'
+      : 'Halo! Saya Arthur, Tech Lead kamu. Let\'s master English syntax with precision!';
+    speakBilingualText(sampleText, { rate: speed });
   }
 
   return (
