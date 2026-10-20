@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 import { calculateLazyHearts } from '@/lib/core/gamification';
 import { classifyMasteryLevel } from '@/lib/core/mastery';
 import {
@@ -45,6 +46,24 @@ export async function GET(request: Request) {
 
     if (!user) {
       return NextResponse.json({ error: 'Pengguna tidak ditemukan.' }, { status: 404 });
+    }
+
+    // 1.5 Cek dan sinkronkan data live dari Supabase Mobile jika ada
+    try {
+      const { data: supaProfile } = await supabaseAdmin
+        .from('user_profiles')
+        .select('*')
+        .eq('email', user.email)
+        .maybeSingle();
+
+      if (supaProfile && user.stats) {
+        user.stats.totalXp = Math.max(user.stats.totalXp, supaProfile.xp || 0);
+        user.stats.currentStreak = Math.max(user.stats.currentStreak, supaProfile.streak_days || 0);
+        user.stats.gems = Math.max(user.stats.gems, supaProfile.gems || 0);
+        user.stats.hearts = supaProfile.hearts ?? user.stats.hearts;
+      }
+    } catch (e) {
+      // fallback smoothly to local stats
     }
 
     // 2. Evaluasi Hati secara Lazy

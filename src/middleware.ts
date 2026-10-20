@@ -39,7 +39,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Daftar rute yang dilindungi
-  const protectedRoutes = ['/home', '/practice', '/progress', '/profile'];
+  const protectedRoutes = ['/dashboard', '/practice', '/progress', '/profile'];
   const isProtectedRoute = protectedRoutes.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`)
   );
@@ -55,10 +55,10 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  // 2. Sudah login membuka /login atau /register -> redirect ke /home
+  // 2. Sudah login membuka /login atau /register -> redirect ke /dashboard
   if (user && isAuthRoute) {
     const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = '/home';
+    redirectUrl.pathname = '/dashboard';
     return NextResponse.redirect(redirectUrl);
   }
 

@@ -56,7 +56,7 @@ export function AuthForm({ mode }: AuthFormProps) {
           throw error;
         }
 
-        router.push('/home');
+        router.push('/dashboard');
         router.refresh();
       } else {
         // 2. Proses Registrasi
@@ -92,12 +92,12 @@ export function AuthForm({ mode }: AuthFormProps) {
         if (data?.user && !data.session) {
           setNeedsEmailConfirmation(true);
           setSuccessMessage(
-            'Pendaftaran berhasil! Tautan verifikasi telah dikirim ke email Anda. Silakan periksa inbox atau spam.'
+            'Pendaftaran berhasil! Akun Anda telah siap. Silakan masuk menggunakan email dan kata sandi Anda.'
           );
         } else {
-          setSuccessMessage('Pendaftaran berhasil! Mengalihkan ke halaman utama...');
+          setSuccessMessage('Pendaftaran berhasil! Mengalihkan ke dashboard...');
           setTimeout(() => {
-            router.push('/home');
+            router.push('/dashboard');
             router.refresh();
           }, 1000);
         }
@@ -109,28 +109,9 @@ export function AuthForm({ mode }: AuthFormProps) {
     }
   }
 
-  // Handle Login dengan Google OAuth
+  // Handle Login dengan Google OAuth (Coming soon badge)
   async function handleGoogleSignIn() {
-    setErrorMessage(null);
-    setIsGoogleLoading(true);
-
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-        },
-      });
-
-      if (error) throw error;
-    } catch (err: any) {
-      setErrorMessage(err.message || 'Gagal menghubungkan dengan Google. Coba lagi.');
-      setIsGoogleLoading(false);
-    }
+    setErrorMessage('Integrasi Google OAuth sedang dalam proses sinkronisasi kampus. Silakan masuk menggunakan Email & Kata Sandi.');
   }
 
   return (
