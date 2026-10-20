@@ -272,6 +272,16 @@ export default function ArenaPage() {
                     {speakingFeedback}
                   </div>
                 )}
+
+                {/* Direct Link to Full ELSA Speaking Lab */}
+                <Link
+                  href="/practice/speaking"
+                  className="w-full mt-2 py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 hover:from-emerald-500/30 hover:to-cyan-500/30 border border-emerald-500/40 text-emerald-300 font-bold text-xs flex items-center justify-center gap-2 transition"
+                >
+                  <Sparkles className="h-4 w-4 text-emerald-400" />
+                  <span>Buka Full ELSA-Style Speaking Lab (Gratis)</span>
+                  <ArrowRight className="h-3.5 w-3.5 ml-1" />
+                </Link>
               </div>
             </div>
 
