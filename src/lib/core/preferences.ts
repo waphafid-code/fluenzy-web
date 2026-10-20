@@ -2,9 +2,62 @@
 // USER PERSONALIZATION & LEARNING PREFERENCES
 // ============================================================================
 
-export type MascotChoice = 'boy' | 'girl';
+export type MascotChoice = 'boy' | 'girl' | 'lily' | 'arthur';
 export type LearningFocus = 'balanced' | 'grammar' | 'review' | 'vocab';
 export type AudioSpeedChoice = 0.8 | 0.95 | 1.1;
+
+export interface CompanionInfo {
+  id: MascotChoice;
+  name: string;
+  role: string;
+  avatar: string;
+  fullImage: string;
+  quote: string;
+  specialty: string[];
+}
+
+export const COMPANIONS: Record<MascotChoice, CompanionInfo> = {
+  lily: {
+    id: 'lily',
+    name: 'Lily (Lumi)',
+    role: 'AI Peer & Speaking Coach',
+    avatar: '/mascot/lily_head_circle.png',
+    fullImage: '/mascot/lumi_solo.png',
+    quote: 'Kamu pasti bisa! Sedikit demi sedikit, pasti bisa!',
+    specialty: ['Home Roadmap', 'Speaking Drill', 'Live Peer Call'],
+  },
+  arthur: {
+    id: 'arthur',
+    name: 'Arthur',
+    role: 'Tech Lead & Diagnostic Mentor',
+    avatar: '/mascot/arthur_head_circle.png',
+    fullImage: '/mascot/arthur_character.png',
+    quote: 'Teknik yang tepat, membuatmu selangkah lebih maju.',
+    specialty: ['Weekly Boss Battle', 'Diagnostic Tests', 'Grammar Surgery'],
+  },
+  boy: {
+    id: 'boy',
+    name: 'Arthur',
+    role: 'Tech Lead & Diagnostic Mentor',
+    avatar: '/mascot/arthur_head_circle.png',
+    fullImage: '/mascot/arthur_character.png',
+    quote: 'Teknik yang tepat, membuatmu selangkah lebih maju.',
+    specialty: ['Weekly Boss Battle', 'Diagnostic Tests', 'Grammar Surgery'],
+  },
+  girl: {
+    id: 'girl',
+    name: 'Lily (Lumi)',
+    role: 'AI Peer & Speaking Coach',
+    avatar: '/mascot/lily_head_circle.png',
+    fullImage: '/mascot/lumi_solo.png',
+    quote: 'Kamu pasti bisa! Sedikit demi sedikit, pasti bisa!',
+    specialty: ['Home Roadmap', 'Speaking Drill', 'Live Peer Call'],
+  },
+};
+
+export function getCompanionInfo(choice: MascotChoice): CompanionInfo {
+  return COMPANIONS[choice] || COMPANIONS.lily;
+}
 
 export interface UserPreferences {
   mascot: MascotChoice;

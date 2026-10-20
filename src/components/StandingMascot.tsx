@@ -4,10 +4,10 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Volume2, Sparkles, MessageCircle, Heart } from 'lucide-react';
 import { speakText, playBubblePop } from '@/lib/audio/speech';
-import { getUserPreferences, saveUserPreferences } from '@/lib/core/preferences';
+import { getUserPreferences, saveUserPreferences, MascotChoice } from '@/lib/core/preferences';
 
 export type MascotMood = 'idle' | 'talking' | 'celebrate' | 'thinking' | 'encouraging';
-export type MascotType = 'boy' | 'girl';
+export type MascotType = MascotChoice;
 
 interface StandingMascotProps {
   mood?: MascotMood;
@@ -103,9 +103,9 @@ export function StandingMascot({
   }[size];
 
   const imageSrc =
-    mascotType === 'boy'
-      ? '/mascot/mascot_boy_standing_transparent.png'
-      : '/mascot/mascot_girl_standing_transparent.png';
+    mascotType === 'girl' || mascotType === 'lily'
+      ? '/mascot/lumi_solo.png'
+      : '/mascot/arthur_character.png';
 
   return (
     <div className={`relative flex flex-col items-center select-none ${className}`}>

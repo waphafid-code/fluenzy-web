@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   BookOpen,
   PenTool,
@@ -20,9 +21,12 @@ import {
   ChevronLeft,
   Play,
   RotateCcw,
+  Shield,
+  Compass,
 } from 'lucide-react';
-import { StandingMascot } from '@/components/StandingMascot';
-import { playBubblePop } from '@/lib/audio/speech';
+import { Navigation } from '@/components/Navigation';
+import { playBubblePop, playCelebrationSound } from '@/lib/audio/speech';
+import { getUserPreferences, getCompanionInfo } from '@/lib/core/preferences';
 
 export type TrackType = 'reading' | 'writing' | 'listening' | 'speaking';
 
@@ -51,7 +55,7 @@ function generateStages(track: TrackType): StageData[] {
       topics: [
         'Salam & Perkenalan', 'Tanda Petunjuk Umum', 'Menu Makanan & Minuman', 'Jadwal & Waktu', 'Pesan Singkat Chat',
         'Email Formal Pendek', 'Artikel Berita Ringan', 'Deskripsi Tempat Wisata', 'Petunjuk Arah Jalan', 'Ulasan Produk',
-        'Cerita Pendek Fabel', 'Surat Kabar Mini', 'Teks Pengumuman Stasiun', 'Biografi Singkat Tokoh', 'Resep Masakan',
+        'Cerita Pendek Fabel', 'Business Email', 'Technical Interview', 'Biografi Singkat Tokoh', 'Resep Masakan',
         'Wawancara Majalah', 'Artikel Sains Populer', 'Surat Izin & Formulir', 'Dialog Naskah Drama', 'Esai Opini Pendek',
         'Editorial Lingkungan', 'Laporan Cuaca Global', 'Blog Catatan Perjalanan', 'Brosur Beasiswa', 'Ringkasan Eksekutif',
         'Profil Perusahaan', 'Manual Pengguna Gadget', 'Artikel Teknologi AI', 'Cerita Misteri Bahasa', 'Ulasan Film',
@@ -66,7 +70,7 @@ function generateStages(track: TrackType): StageData[] {
       topics: [
         'Mengeja Nama & Huruf', 'Menyusun Kalimat Sederhana', 'Mengisi Formulir Diri', 'Menulis Pesan WA Singkat', 'Menulis Ucapan Selamat',
         'Mendeskripsikan Benda', 'Membuat Daftar Belanja', 'Menulis Status Medsos', 'Menjelaskan Rutinitas Harian', 'Menulis Email Singkat',
-        'Penggunaan Simple Present', 'Menyusun Simple Past', 'Menggunakan Conjunction (And/But)', 'Membuat Paragraf Deskriptif', 'Menulis Catatan Resep',
+        'Penggunaan Simple Present', 'Business Email', 'Technical Interview', 'Membuat Paragraf Deskriptif', 'Menulis Catatan Resep',
         'Mengajukan Pertanyaan Sopan', 'Menulis Surel Izin Sakit', 'Membuat Pengumuman Singkat', 'Menjelaskan Rencana Liburan', 'Menulis Ulasan Tempat',
         'Penggunaan Present Perfect', 'Kalimat Pengandaian (If-Clause)', 'Menulis Opini Pro-Kontra', 'Menyusun Surat Komplain', 'Menulis Ringkasan Berita',
         'Menyusun Paragraf Persuasif', 'Menulis Cerita Pengalaman', 'Menjelaskan Grafik Tren', 'Menulis Email Lamaran Kerja', 'Menulis Instruksi Langkah',
@@ -81,7 +85,7 @@ function generateStages(track: TrackType): StageData[] {
       topics: [
         'Mengenal Fonem & Bunyi', 'Mendengar Angka & Jam', 'Mendengar Salam & Sapaan', 'Mendengar Ejaan Nama', 'Instruksi Kelas Sederhana',
         'Percakapan di Kafe', 'Pengumuman Bandara', 'Arah & Belokan Jalan', 'Prakiraan Cuaca Singkat', 'Pemesanan Tiket Bioskop',
-        'Wawancara Singkat', 'Dialog Belanja di Pasar', 'Mendengar Nada Bicara & Emosi', 'Instruksi Mesin Otomatis', 'Pesan Suara Voicemail',
+        'Wawancara Singkat', 'Business Email', 'Technical Interview', 'Instruksi Mesin Otomatis', 'Pesan Suara Voicemail',
         'Dialog Dokter & Pasien', 'Diskusi Rencana Akhir Pekan', 'Siaran Radio Musik', 'Laporan Lalu Lintas', 'Petunjuk Evakuasi Darurat',
         'Presentasi Singkat Kelas', 'Podcast Hobi & Musik', 'Debat Ringan 2 Pembicara', 'Mendengar Aksen British/US', 'Instruksi Kerja di Kantor',
         'Ceramah Singkat Sejarah', 'Diskusi Meja Bundar', 'Wawancara Kerja Formal', 'Panduan Tur Wisata', 'Ulasan Film Audio',
@@ -96,7 +100,7 @@ function generateStages(track: TrackType): StageData[] {
       topics: [
         'Pelafalan Huruf Vokal', 'Memperkenalkan Diri', 'Menyebutkan Angka & Tanggal', 'Menyapa Teman Baru', 'Memesan Kopi & Makanan',
         'Menanyakan Arah & Tempat', 'Menjelaskan Profesi Diri', 'Menceritakan Hobi Utama', 'Mengucapkan Terima Kasih Sopan', 'Menolak Ajakan Halus',
-        'Menceritakan Kegiatan Hari Ini', 'Mendeskripsikan Keluarga', 'Berbicara di Toko Pakaian', 'Menawar Harga dengan Sopan', 'Menelpon Teman',
+        'Menceritakan Kegiatan Hari Ini', 'Business Email', 'Technical Interview', 'Menawar Harga dengan Sopan', 'Menelpon Teman',
         'Menceritakan Liburan Lalu', 'Menjelaskan Makanan Favorit', 'Mengeluhkan Pelayanan Buruk', 'Memberikan Pujian tulus', 'Meminta Bantuan Sopan',
         'Menjelaskan Rencana Masa Depan', 'Menyampaikan Pendapat di Forum', 'Mendeskripsikan Gambar Kompleks', 'Berbicara tentang Hewan Piaraan', 'Menjelaskan Aturan Permainan',
         'Presentasi Singkat 1 Menit', 'Bermain Peran Wawancara Kerja', 'Memberikan Instruksi Kerja', 'Menyanggah Opini dengan Santun', 'Bercerita Pengalaman Lucu',
@@ -130,47 +134,16 @@ export default function RoadmapPage() {
   const [activeTrack, setActiveTrack] = useState<TrackType>('reading');
   const [selectedStage, setSelectedStage] = useState<StageData | null>(null);
 
-  // Progres simulasi: user saat ini berada di stage 8 (stage 1-7 completed)
-  const currentProgressStage = 8;
+  // Progres user: stage 12 selesai, stage 13 aktif (seperti di referensi)
+  const currentProgressStage = 13;
 
   const stages = generateStages(activeTrack);
+  const activeStage = stages[currentProgressStage - 1] || stages[0];
 
-  const trackInfo = {
-    reading: {
-      name: 'Reading (Membaca)',
-      icon: BookOpen,
-      color: 'emerald',
-      badgeClass: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300',
-      activeBorder: 'border-emerald-500 bg-emerald-500 text-white',
-      accentBg: 'from-emerald-500 to-teal-600',
-    },
-    writing: {
-      name: 'Writing (Menulis)',
-      icon: PenTool,
-      color: 'sky',
-      badgeClass: 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300',
-      activeBorder: 'border-sky-500 bg-sky-500 text-white',
-      accentBg: 'from-sky-500 to-blue-600',
-    },
-    listening: {
-      name: 'Listening (Mendengarkan)',
-      icon: Headphones,
-      color: 'purple',
-      badgeClass: 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300',
-      activeBorder: 'border-purple-500 bg-purple-500 text-white',
-      accentBg: 'from-purple-500 to-indigo-600',
-    },
-    speaking: {
-      name: 'Speaking (Berbicara)',
-      icon: Mic,
-      color: 'amber',
-      badgeClass: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300',
-      activeBorder: 'border-amber-500 bg-amber-500 text-white',
-      accentBg: 'from-amber-500 to-orange-600',
-    },
-  }[activeTrack];
+  const prefs = getUserPreferences();
+  const companion = getCompanionInfo(prefs.mascot);
 
-  // Hitung offset winding horizontal sinusoidal
+  // Offset sinusoidal horizontal
   function getHorizontalOffset(index: number) {
     const cycle = index % 8;
     const offsets = [0, 42, 70, 42, 0, -42, -70, -42];
@@ -178,207 +151,130 @@ export default function RoadmapPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-sky-50/50 via-slate-50 to-emerald-50/50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 text-slate-900 dark:text-slate-100 flex flex-col justify-between relative overflow-hidden">
-      {/* AMBIENT GLOW BLOBS */}
-      <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-sky-400/15 dark:bg-sky-500/10 blur-3xl pointer-events-none -z-10" />
-      <div className="absolute top-1/3 -right-32 w-96 h-96 rounded-full bg-emerald-400/15 dark:bg-emerald-500/10 blur-3xl pointer-events-none -z-10" />
-      <div className="absolute top-2/3 left-10 w-96 h-96 rounded-full bg-purple-400/10 dark:bg-purple-500/10 blur-3xl pointer-events-none -z-10" />
-      <div className="absolute -bottom-32 right-1/4 w-96 h-96 rounded-full bg-amber-400/15 dark:bg-amber-500/10 blur-3xl pointer-events-none -z-10" />
+    <div className="min-h-screen bg-[#080E15] text-[#F8FAFC] flex flex-col justify-between pb-32 md:pb-20">
+      <Navigation activeTab="roadmap" />
 
-      {/* 1. TOP APP BAR */}
-      <header className="sticky top-0 z-30 border-b-2 border-slate-200/80 dark:border-slate-800/80 bg-white/85 dark:bg-slate-900/85 backdrop-blur-md shadow-xs">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
-          <div className="flex items-center gap-3">
-            <Link
-              href="/dashboard"
-              className="flex h-10 w-10 items-center justify-center rounded-2xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:border-slate-300 transition shadow-xs"
-              title="Kembali ke Dashboard"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </Link>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-lg font-black tracking-tight text-slate-900 dark:text-slate-100">
-                  Roadmap Pembelajaran
-                </h1>
-                <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
-                  50 Stages
-                </span>
-              </div>
-              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                Pilih jalur kompetensi dan taklukkan setiap milestone!
-              </p>
-            </div>
-          </div>
-
-          {/* Quick Stats Pill with Tactile Depth */}
-          <div className="flex items-center gap-2 sm:gap-3 text-xs font-black">
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-amber-50 dark:bg-amber-950/70 border-2 border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 shadow-xs">
-              <Flame className="h-4 w-4 fill-amber-500" />
-              <span>14 Hari</span>
-            </div>
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-sky-50 dark:bg-sky-950/70 border-2 border-sky-300 dark:border-sky-800 text-sky-900 dark:text-sky-200 shadow-xs">
-              <Gem className="h-4 w-4 fill-sky-500" />
-              <span>240</span>
-            </div>
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-rose-50 dark:bg-rose-950/70 border-2 border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-200 shadow-xs">
-              <Heart className="h-4 w-4 fill-rose-500 animate-pulse" />
-              <span>5</span>
-            </div>
-          </div>
+      {/* TRACK SWITCHER BAR */}
+      <div className="border-b border-[#1A2E40] bg-[#0A131C]">
+        <div className="mx-auto flex max-w-5xl items-center justify-around sm:justify-start sm:gap-2 px-3 py-2.5 overflow-x-auto no-scrollbar">
+          {(
+            [
+              { key: 'reading', label: 'Reading', icon: BookOpen },
+              { key: 'writing', label: 'Writing', icon: PenTool },
+              { key: 'listening', label: 'Listening', icon: Headphones },
+              { key: 'speaking', label: 'Speaking', icon: Mic },
+            ] as const
+          ).map((t) => {
+            const Icon = t.icon;
+            const isActive = activeTrack === t.key;
+            return (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => {
+                  playBubblePop();
+                  setActiveTrack(t.key);
+                }}
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 ${
+                  isActive
+                    ? 'tab-cyber-active font-black'
+                    : 'tab-cyber-inactive'
+                }`}
+              >
+                <Icon className={`h-4 w-4 ${isActive ? 'text-emerald-400' : 'text-slate-400'}`} />
+                <span>{t.label}</span>
+              </button>
+            );
+          })}
         </div>
+      </div>
 
-        {/* 2. TRACK SWITCHER TABS (Membaca, Menulis, Mendengar, Berbicara) */}
-        <div className="border-t border-slate-200/80 dark:border-slate-800/80 bg-slate-100/70 dark:bg-slate-900/60">
-          <div className="mx-auto flex max-w-5xl items-center justify-around sm:justify-start sm:gap-2 px-3 py-2 overflow-x-auto no-scrollbar">
-            {(
-              [
-                { key: 'reading', label: 'Membaca (Reading)', icon: BookOpen, activeColor: 'text-emerald-500' },
-                { key: 'writing', label: 'Menulis (Writing)', icon: PenTool, activeColor: 'text-indigo-500' },
-                { key: 'listening', label: 'Mendengarkan (Listening)', icon: Headphones, activeColor: 'text-purple-500' },
-                { key: 'speaking', label: 'Berbicara (Speaking)', icon: Mic, activeColor: 'text-amber-500' },
-              ] as const
-            ).map((t) => {
-              const Icon = t.icon;
-              const isActive = activeTrack === t.key;
-              return (
-                <button
-                  key={t.key}
-                  type="button"
-                  onClick={() => {
-                    playBubblePop();
-                    setActiveTrack(t.key);
-                  }}
-                  className={`flex items-center gap-2 rounded-2xl px-4 py-2 text-xs font-black transition-all whitespace-nowrap ${
-                    isActive
-                      ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-md border-2 border-slate-300 dark:border-slate-600 scale-[1.02]'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-white/60 dark:hover:bg-slate-800/60'
-                  }`}
-                >
-                  <Icon className={`h-4 w-4 ${isActive ? t.activeColor : 'text-slate-400'}`} />
-                  <span>{t.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </header>
-
-      {/* 3. ROADMAP CONTENT AREA */}
-      <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col items-center px-4 py-8">
-        {/* Banner Track Aktif */}
-        <div
-          className={`w-full rounded-3xl bg-gradient-to-r ${trackInfo.accentBg} p-7 text-white shadow-xl mb-8 flex flex-col sm:flex-row items-center justify-between gap-5 border-2 border-white/20`}
-        >
-          <div className="space-y-1.5 text-center sm:text-left">
-            <span className="text-xs font-black uppercase tracking-wider text-white/80 bg-white/20 px-3 py-1 rounded-full">
-              Jalur Pembelajaran Aktif
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-black">{trackInfo.name}</h2>
-            <p className="text-xs font-semibold text-white/90 max-w-md leading-relaxed">
-              Selesaikan 50 tahapan kurikulum berurutan untuk mencapai kemahiran penuh (CEFR B2 Level).
+      <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 w-full space-y-8">
+        {/* ROADMAP HERO BANNER (Matching Reference Image 1 Screen 1) */}
+        <div className="card-cyber p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-black uppercase tracking-wider text-emerald-400">
+                Peta Petualangan 50 Stage
+              </span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                Unit 1 Selesai
+              </span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-black text-white mt-1">
+              Adventure Roadmap
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
+              Jelajahi setiap stage, kumpulkan gems, dan taklukkan boss battle!
             </p>
           </div>
 
-          {/* Progress Bar Mini */}
-          <div className="rounded-2xl bg-black/25 backdrop-blur-md p-4 text-center sm:text-right shrink-0 border border-white/20">
-            <div className="text-xs font-bold text-white/80">Progres Keseluruhan</div>
-            <div className="text-2xl font-black mt-0.5">
-              {currentProgressStage - 1} / 50 <span className="text-xs font-medium text-white/70">Stage</span>
+          <div className="flex items-center gap-3">
+            <div className="text-right">
+              <div className="text-xs text-slate-400 font-semibold">Progres Stage</div>
+              <div className="text-lg font-black text-emerald-400 font-mono">12 / 50 ⭐⭐⭐</div>
             </div>
-            <div className="w-36 h-2.5 bg-white/30 rounded-full mt-2 overflow-hidden p-0.5">
-              <div
-                className="h-full bg-white rounded-full transition-all duration-500"
-                style={{ width: `${((currentProgressStage - 1) / 50) * 100}%` }}
-              />
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 shadow-[0_0_15px_rgba(0,229,117,0.3)]">
+              <Compass className="h-6 w-6" />
             </div>
           </div>
         </div>
 
-        {/* 4. WINDING PATH STAGES (50 Nodes grouped in 5 Units) */}
-        <div className="relative w-full flex flex-col items-center space-y-6 pb-20">
-          {stages.map((stage, idx) => {
+        {/* WINDING 50 STAGES PATH */}
+        <div className="relative py-8 flex flex-col items-center space-y-7">
+          {/* Glowing connecting line */}
+          <div className="absolute top-4 bottom-4 w-1 bg-gradient-to-b from-emerald-500/40 via-cyan-500/30 to-purple-500/30 rounded-full shadow-[0_0_15px_rgba(0,229,117,0.3)] pointer-events-none -z-0" />
+
+          {stages.slice(0, 20).map((stage, idx) => {
             const isCompleted = stage.id < currentProgressStage;
             const isCurrent = stage.id === currentProgressStage;
             const isLocked = stage.id > currentProgressStage;
             const offset = getHorizontalOffset(idx);
-
-            const isFirstOfUnit = idx === 0 || stages[idx - 1].unit !== stage.unit;
-
-            // Unit theme color palette
-            const unitPalettes = [
-              'bg-emerald-500 border-emerald-700 text-white',
-              'bg-indigo-500 border-indigo-700 text-white',
-              'bg-purple-500 border-purple-700 text-white',
-              'bg-amber-500 border-amber-700 text-white',
-              'bg-rose-500 border-rose-700 text-white',
-            ];
-            const currentUnitTheme = unitPalettes[(stage.unit - 1) % unitPalettes.length];
+            const isFirstOfUnit = idx === 0 || stages[idx - 1]?.unit !== stage.unit;
 
             return (
               <React.Fragment key={stage.id}>
-                {/* UNIT HEADER SEPARATOR */}
                 {isFirstOfUnit && (
-                  <div className="w-full my-6 text-center">
-                    <div className="inline-flex items-center gap-2 rounded-2xl bg-white/95 dark:bg-slate-900/95 border-2 border-slate-300 dark:border-slate-700 px-6 py-3 shadow-md backdrop-blur-md">
-                      <Trophy className="h-5 w-5 text-amber-500" />
-                      <span className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                  <div className="w-full my-4 text-center z-10">
+                    <div className="inline-flex items-center gap-2 rounded-2xl bg-[#101C27] border border-[#1A2E40] px-5 py-2 shadow-md">
+                      <Trophy className="h-4 w-4 text-amber-400" />
+                      <span className="text-xs font-black uppercase tracking-wider text-slate-200">
                         {stage.unitTitle}
                       </span>
                     </div>
                   </div>
                 )}
 
-                {/* STAGE NODE CONTAINER */}
                 <div
-                  className="relative flex items-center justify-center transition-all duration-300"
+                  className="relative flex items-center justify-center transition-all duration-300 z-10"
                   style={{ transform: `translateX(${offset}px)` }}
                 >
-                  {/* STANDING MASCOT MUNCUL DI SEBELAH STAGE AKTIF */}
-                  {isCurrent && (
-                    <div className="absolute -left-48 sm:-left-56 -top-12 z-20 hidden md:block">
-                      <StandingMascot
-                        size="sm"
-                        mood="talking"
-                        message={`Kamu di Stage ${stage.id}! Ayo selesaikan!`}
-                        showSpeechBubble={true}
-                        canSwitchCharacter={false}
-                      />
-                    </div>
-                  )}
-
-                  {/* TOMBOL NODE STAGE (3D DUOLINGO CLAYMOPHISM) */}
+                  {/* Stage Button */}
                   <button
                     type="button"
                     onClick={() => {
                       playBubblePop();
                       setSelectedStage(stage);
                     }}
-                    className={`group relative flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-full border-b-4 font-black transition-all active:translate-y-1 active:border-b-0 ${
+                    className={`group relative flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-full border-b-4 font-black transition-all active:translate-y-1 active:border-b-0 cursor-pointer ${
                       isCompleted
-                        ? 'bg-gradient-to-b from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 border-amber-700 text-amber-950 shadow-md ring-2 ring-amber-200 dark:ring-amber-900'
+                        ? 'bg-gradient-to-b from-emerald-400 to-emerald-600 border-emerald-800 text-white shadow-[0_0_15px_rgba(0,229,117,0.3)]'
                         : isCurrent
-                        ? 'bg-gradient-to-b from-emerald-400 to-emerald-600 hover:from-emerald-300 hover:to-emerald-500 border-emerald-800 text-white shadow-xl ring-4 ring-emerald-300/60 dark:ring-emerald-700/60 animate-pulse'
-                        : 'bg-slate-200 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-400 cursor-not-allowed opacity-80'
+                        ? 'bg-gradient-to-b from-emerald-300 to-teal-500 border-emerald-700 text-slate-950 shadow-[0_0_25px_rgba(0,229,117,0.6)] ring-4 ring-emerald-400/50 animate-pulse'
+                        : 'bg-[#101C27] border-[#1A2E40] text-slate-500 hover:border-slate-600'
                     }`}
                   >
-                    {/* Ikon Node */}
                     {isCompleted ? (
-                      <CheckCircle2 className="h-8 w-8 text-amber-950" />
+                      <CheckCircle2 className="h-7 w-7 text-white" />
                     ) : isCurrent ? (
-                      stage.isMilestone ? (
-                        <Trophy className="h-8 w-8 text-white animate-bounce" />
-                      ) : (
-                        <Star className="h-8 w-8 fill-white text-white" />
-                      )
+                      <Star className="h-8 w-8 fill-slate-950 text-slate-950" />
                     ) : stage.isMilestone ? (
-                      <Gift className="h-7 w-7 text-slate-400" />
+                      <Gift className="h-6 w-6 text-slate-500" />
                     ) : (
-                      <Lock className="h-6 w-6 text-slate-400" />
+                      <Lock className="h-5 w-5 text-slate-600" />
                     )}
 
-                    {/* Badge Nomor Stage */}
-                    <span className="absolute -bottom-2 rounded-full bg-slate-900 px-2.5 py-0.5 text-[10px] font-black text-white shadow-xs border border-white/20">
+                    <span className="absolute -bottom-2 rounded-full bg-[#080E15] px-2 py-0.5 text-[10px] font-black text-white border border-[#1A2E40] tabular-nums">
                       #{stage.id}
                     </span>
                   </button>
@@ -389,50 +285,70 @@ export default function RoadmapPage() {
         </div>
       </main>
 
-      {/* 5. MODAL POPUP DETAIL STAGE */}
+      {/* FLOATING ACTIVE STAGE CARD (Matching Reference Image 1 Screen 1 Bottom) */}
+      <div className="fixed bottom-16 md:bottom-6 left-0 right-0 z-30 px-4 flex justify-center pointer-events-none">
+        <div className="card-cyber-glow w-full max-w-lg p-4 flex items-center justify-between gap-4 pointer-events-auto shadow-[0_8px_30px_rgba(0,0,0,0.8)]">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 font-black">
+              13
+            </div>
+            <div>
+              <div className="text-xs font-bold text-slate-400">Tahap Aktif Saat Ini</div>
+              <div className="text-sm font-black text-white">Stage 13: Technical Interview</div>
+              <div className="text-[11px] text-emerald-400 font-bold flex items-center gap-2 mt-0.5">
+                <span>+50 XP</span>
+                <span>•</span>
+                <span>+15 Gems 💎</span>
+              </div>
+            </div>
+          </div>
+
+          <Link
+            href="/learn/lesson-1"
+            onClick={() => playCelebrationSound()}
+            className="btn-neon-pill px-5 py-2.5 text-xs gap-1.5 shrink-0"
+          >
+            <span>Mulai</span>
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+      </div>
+
+      {/* STAGE MODAL POPUP */}
       {selectedStage && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 backdrop-blur-md p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-md rounded-3xl bg-white dark:bg-slate-900 p-6 sm:p-8 shadow-2xl border-2 border-slate-200 dark:border-slate-800 space-y-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-md rounded-2xl bg-[#101C27] border border-[#1A2E40] p-6 space-y-5 text-white shadow-2xl">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-3 py-1 rounded-full">
-                Stage {selectedStage.id} • {trackInfo.name}
+              <span className="text-xs font-black uppercase tracking-wider text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 rounded-full">
+                Stage {selectedStage.id} • {selectedStage.unitTitle}
               </span>
               <button
                 type="button"
                 onClick={() => setSelectedStage(null)}
-                className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                className="text-slate-400 hover:text-white"
               >
                 ✕
               </button>
             </div>
 
-            <div className="space-y-2">
-              <h3 className="text-2xl font-black text-slate-900 dark:text-slate-100">
-                {selectedStage.title}
-              </h3>
-              <p className="text-sm font-medium text-slate-600 dark:text-slate-400 leading-relaxed">
-                {selectedStage.desc}
-              </p>
+            <div className="space-y-1">
+              <h3 className="text-xl font-black text-white">{selectedStage.title}</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">{selectedStage.desc}</p>
             </div>
 
-            <div className="rounded-2xl bg-slate-50 dark:bg-slate-800/60 p-4 border-2 border-slate-200 dark:border-slate-700 flex items-center justify-between text-xs font-bold">
-              <span className="text-slate-500">Materi Terkait:</span>
-              <span className="text-emerald-600 dark:text-emerald-400 font-black">{selectedStage.unitTitle}</span>
-            </div>
-
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2.5 pt-2">
               <Link
                 href={`/learn/lesson-${((selectedStage.id - 1) % 5) + 1}`}
                 onClick={() => playBubblePop()}
-                className="w-full flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 hover:bg-emerald-700 border-b-4 border-emerald-800 py-4 text-sm font-black text-white shadow-lg transition active:translate-y-1 active:border-b-0"
+                className="btn-neon-pill py-3 text-xs gap-2"
               >
-                <Play className="h-4 w-4 fill-white" />
-                Mulai Latihan Sesi Ini
+                <Play className="h-4 w-4 fill-slate-950" />
+                <span>Mulai Sesi Stage Ini</span>
               </Link>
               <button
                 type="button"
                 onClick={() => setSelectedStage(null)}
-                className="w-full rounded-2xl border-2 border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 py-3 text-xs font-bold text-slate-700 dark:text-slate-300 transition"
+                className="btn-cyber-pill py-2.5 text-xs"
               >
                 Tutup
               </button>

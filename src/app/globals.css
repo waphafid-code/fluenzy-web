@@ -2,172 +2,144 @@
 
 @layer base {
   :root {
-    --background: #f0f4f8;
-    --foreground: #0f172a;
-    --card: #ffffff;
-    --card-foreground: #0f172a;
-    --primary: #10b981;
-    --primary-foreground: #ffffff;
-    --accent: #0284c7;
-    --accent-foreground: #ffffff;
-    --muted: #e2e8f0;
-    --muted-foreground: #64748b;
-    --border: #cbd5e1;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --background: #090e17;
-      --foreground: #f8fafc;
-      --card: #131c31;
-      --card-foreground: #f8fafc;
-      --primary: #10b981;
-      --primary-foreground: #ffffff;
-      --accent: #38bdf8;
-      --accent-foreground: #0b1120;
-      --muted: #1e293b;
-      --muted-foreground: #94a3b8;
-      --border: #1e293b;
-    }
+    --background: #080E15;
+    --foreground: #F8FAFC;
+    --card: #101C27;
+    --card-foreground: #F8FAFC;
+    --card-hover: #142433;
+    --primary: #00E575;
+    --primary-foreground: #031D10;
+    --accent: #00D2FF;
+    --accent-foreground: #041B26;
+    --muted: #182838;
+    --muted-foreground: #94A3B8;
+    --border: #1A2E40;
+    --glow-emerald: rgba(0, 229, 117, 0.25);
+    --glow-cyan: rgba(0, 210, 255, 0.25);
   }
 
   body {
     background-color: var(--background);
     color: var(--foreground);
     font-family: var(--font-jakarta, var(--font-geist-sans)), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    /* Rich playful ambient gradient mesh */
+    /* Dark Cyber Gamified Ambient Gradient Mesh matching reference */
     background-image: 
-      radial-gradient(at 5% 10%, rgba(16, 185, 129, 0.12) 0px, transparent 45%),
-      radial-gradient(at 95% 15%, rgba(56, 189, 248, 0.14) 0px, transparent 50%),
-      radial-gradient(at 50% 50%, rgba(245, 158, 11, 0.08) 0px, transparent 55%),
-      radial-gradient(at 85% 85%, rgba(139, 92, 246, 0.10) 0px, transparent 50%),
-      radial-gradient(at 10% 90%, rgba(244, 63, 94, 0.08) 0px, transparent 45%);
+      radial-gradient(at 10% 5%, rgba(0, 229, 117, 0.09) 0px, transparent 40%),
+      radial-gradient(at 90% 10%, rgba(0, 210, 255, 0.08) 0px, transparent 45%),
+      radial-gradient(at 50% 50%, rgba(16, 185, 129, 0.04) 0px, transparent 55%),
+      radial-gradient(at 80% 90%, rgba(0, 210, 255, 0.06) 0px, transparent 50%),
+      radial-gradient(at 15% 95%, rgba(0, 229, 117, 0.07) 0px, transparent 45%);
     background-attachment: fixed;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
-/* 3D Tactile Claymorphic Buttons (Duolingo Style Chunky Press) */
-.btn-clay-emerald {
-  background: linear-gradient(180deg, #10b981 0%, #059669 100%);
-  color: #ffffff;
-  border-bottom: 4px solid #047857;
-  box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.25), 0 2px 4px -2px rgba(16, 185, 129, 0.2);
+/* Gamified Tabular Numbers */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* Cyber Surface Cards */
+.card-cyber {
+  background-color: #101C27;
+  border: 1px solid #1A2E40;
+  border-radius: 1rem;
+  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-cyber:hover {
+  border-color: rgba(0, 229, 117, 0.35);
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.45), 0 0 20px rgba(0, 229, 117, 0.08);
+}
+
+.card-cyber-glow {
+  background: linear-gradient(145deg, #12212F 0%, #0F1A25 100%);
+  border: 1px solid rgba(0, 229, 117, 0.3);
+  box-shadow: 0 0 25px rgba(0, 229, 117, 0.12), inset 0 1px 1px rgba(255, 255, 255, 0.05);
+  border-radius: 1rem;
+}
+
+.card-cyber-cyan {
+  background: linear-gradient(145deg, #0F1E2A 0%, #0B1621 100%);
+  border: 1px solid rgba(0, 210, 255, 0.3);
+  box-shadow: 0 0 25px rgba(0, 210, 255, 0.12), inset 0 1px 1px rgba(255, 255, 255, 0.05);
+  border-radius: 1rem;
+}
+
+/* Tactile Neon Buttons matching Reference UI */
+.btn-neon-pill {
+  background: linear-gradient(180deg, #00E575 0%, #059669 100%);
+  color: #031D10;
+  font-weight: 800;
+  border-radius: 9999px;
+  border-bottom: 3px solid #047857;
+  box-shadow: 0 0 20px rgba(0, 229, 117, 0.35), 0 4px 6px -1px rgba(0, 0, 0, 0.3);
   transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.btn-clay-emerald:hover {
-  background: linear-gradient(180deg, #34d399 0%, #059669 100%);
-  box-shadow: 0 6px 12px -2px rgba(16, 185, 129, 0.35);
-}
-.btn-clay-emerald:active {
-  transform: translateY(2px);
-  border-bottom-width: 2px;
-  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.btn-clay-sky {
-  background: linear-gradient(180deg, #0ea5e9 0%, #0284c7 100%);
-  color: #ffffff;
-  border-bottom: 4px solid #0369a1;
-  box-shadow: 0 4px 6px -1px rgba(14, 165, 233, 0.25);
+.btn-neon-pill:hover {
+  background: linear-gradient(180deg, #26EE8B 0%, #059669 100%);
+  box-shadow: 0 0 28px rgba(0, 229, 117, 0.5), 0 6px 12px -2px rgba(0, 0, 0, 0.4);
+}
+
+.btn-neon-pill:active {
+  transform: translateY(2px);
+  border-bottom-width: 1px;
+}
+
+.btn-cyber-pill {
+  background-color: #142433;
+  color: #F8FAFC;
+  font-weight: 700;
+  border-radius: 9999px;
+  border: 1px solid #1E374D;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
   transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.btn-clay-sky:hover {
-  background: linear-gradient(180deg, #38bdf8 0%, #0284c7 100%);
-}
-.btn-clay-sky:active {
-  transform: translateY(2px);
-  border-bottom-width: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.btn-clay-amber {
-  background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
-  color: #ffffff;
-  border-bottom: 4px solid #b45309;
-  box-shadow: 0 4px 6px -1px rgba(245, 158, 11, 0.25);
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.btn-clay-amber:hover {
-  background: linear-gradient(180deg, #fbbf24 0%, #d97706 100%);
-}
-.btn-clay-amber:active {
-  transform: translateY(2px);
-  border-bottom-width: 2px;
+.btn-cyber-pill:hover {
+  background-color: #192F43;
+  border-color: rgba(0, 210, 255, 0.4);
+  color: #FFFFFF;
+  box-shadow: 0 0 16px rgba(0, 210, 255, 0.2);
 }
 
-.btn-clay-indigo {
-  background: linear-gradient(180deg, #6366f1 0%, #4f46e5 100%);
-  color: #ffffff;
-  border-bottom: 4px solid #3730a3;
-  box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.25);
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.btn-clay-indigo:hover {
-  background: linear-gradient(180deg, #818cf8 0%, #4f46e5 100%);
-}
-.btn-clay-indigo:active {
-  transform: translateY(2px);
-  border-bottom-width: 2px;
+.btn-cyber-pill:active {
+  transform: translateY(1px);
 }
 
-.btn-clay-rose {
-  background: linear-gradient(180deg, #f43f5e 0%, #e11d48 100%);
-  color: #ffffff;
-  border-bottom: 4px solid #be123c;
-  box-shadow: 0 4px 6px -1px rgba(244, 63, 94, 0.25);
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.btn-clay-rose:hover {
-  background: linear-gradient(180deg, #fb7185 0%, #e11d48 100%);
-}
-.btn-clay-rose:active {
-  transform: translateY(2px);
-  border-bottom-width: 2px;
+/* Active 4-Tab Glow Pill */
+.tab-cyber-active {
+  background-color: rgba(0, 229, 117, 0.12);
+  color: #00E575;
+  border: 1px solid rgba(0, 229, 117, 0.4);
+  box-shadow: 0 0 16px rgba(0, 229, 117, 0.22);
 }
 
-/* Tactile Claymorphism Card Containers */
-.card-clay {
-  background: rgba(255, 255, 255, 0.94);
-  border: 2px solid #e2e8f0;
-  box-shadow: 
-    0 12px 24px -6px rgba(15, 23, 42, 0.06), 
-    0 4px 8px -2px rgba(15, 23, 42, 0.04),
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.8);
-  border-radius: 1.5rem;
+.tab-cyber-inactive {
+  background-color: transparent;
+  color: #94A3B8;
+  border: 1px solid transparent;
 }
 
-.card-clay-colorful {
-  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
-  border: 2px solid #e2e8f0;
-  box-shadow: 
-    0 14px 28px -6px rgba(15, 23, 42, 0.07), 
-    0 6px 12px -2px rgba(15, 23, 42, 0.05);
-  border-radius: 1.5rem;
+.tab-cyber-inactive:hover {
+  background-color: #142433;
+  color: #F8FAFC;
+  border-color: #1E374D;
 }
 
-@media (prefers-color-scheme: dark) {
-  .card-clay, .card-clay-colorful {
-    background: rgba(19, 28, 49, 0.88);
-    border: 2px solid #1e293b;
-    box-shadow: 
-      0 14px 28px -6px rgba(0, 0, 0, 0.35), 
-      inset 0 1px 1px 0 rgba(255, 255, 255, 0.05);
-  }
-}
-
-/* Playful Stage Pod for Mascot */
-.mascot-stage-pod {
-  background: radial-gradient(circle at 50% 20%, rgba(255, 255, 255, 0.95) 0%, rgba(238, 242, 255, 0.85) 100%);
-  border: 3px solid #c7d2fe;
-  box-shadow: 
-    0 16px 32px -8px rgba(79, 70, 229, 0.15),
-    0 6px 16px -4px rgba(16, 185, 129, 0.12),
-    inset 0 2px 4px 0 rgba(255, 255, 255, 0.9);
-}
-
-@media (prefers-color-scheme: dark) {
-  .mascot-stage-pod {
-    background: radial-gradient(circle at 50% 20%, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.85) 100%);
-    border: 3px solid #312e81;
-    box-shadow: 0 16px 32px -8px rgba(0, 0, 0, 0.5);
-  }
+/* Floating pedestal under Lumi/Lily */
+.mascot-pedestal-glow {
+  background: radial-gradient(circle at 50% 50%, rgba(0, 229, 117, 0.28) 0%, rgba(0, 210, 255, 0.15) 45%, transparent 70%);
+  border-radius: 50%;
+  filter: blur(8px);
 }

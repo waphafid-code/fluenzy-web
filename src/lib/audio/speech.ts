@@ -154,3 +154,11 @@ export function speakLetter(char: string, onStart?: () => void, onEnd?: () => vo
   playBubblePop();
   speakText(char, { rate: 0.8, pitch: 1.1, onStart, onEnd });
 }
+
+/**
+ * Mengucapkan teks dengan turtle mode (kecepatan lambat 0.65x untuk artikulasi)
+ */
+export function speakTurtleMode(text: string, options: SpeechOptions = {}) {
+  speakText(text, { rate: 0.65, ...options });
+}
+
