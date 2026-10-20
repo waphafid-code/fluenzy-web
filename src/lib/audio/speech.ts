@@ -1,6 +1,9 @@
 // ============================================================================
 // AUDIO & SPEECH SYNTHESIS ENGINE (Natural Bilingual Indonesian & English TTS)
+// Supports Customizable Accents (US, UK, AU), Indonesian Voices, & Code-Switching
 // ============================================================================
+
+import { getUserPreferences, EnglishAccentChoice } from '@/lib/core/preferences';
 
 /**
  * Memainkan suara "pop" ringan saat memilih/mengetuk kata atau huruf.
@@ -65,47 +68,188 @@ export function playCelebrationSound() {
 }
 
 // ============================================================================
-// VOICE MANAGEMENT & CACHING
+// VOICE MANAGEMENT & ACCENT FILTERING
 // ============================================================================
 
-let cachedEnglishVoice: SpeechSynthesisVoice | null = null;
-let cachedIndonesianVoice: SpeechSynthesisVoice | null = null;
-
-export function getEnglishVoice(): SpeechSynthesisVoice | null {
-  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return null;
-  if (cachedEnglishVoice) return cachedEnglishVoice;
-
-  const voices = window.speechSynthesis.getVoices();
-  const englishVoices = voices.filter((v) => v.lang.startsWith('en'));
-
-  const preferredVoice =
-    englishVoices.find(
-      (v) =>
-        v.name.includes('Natural') ||
-        v.name.includes('Google') ||
-        v.name.includes('Jenny') ||
-        v.name.includes('Guy') ||
-        v.name.includes('Aria') ||
-        v.name.includes('Samantha') ||
-        v.name.includes('Daniel')
-    ) || englishVoices[0];
-
-  if (preferredVoice) cachedEnglishVoice = preferredVoice;
-  return preferredVoice || null;
+export interface GroupedVoices {
+  indonesian: SpeechSynthesisVoice[];
+  englishUS: SpeechSynthesisVoice[];
+  englishUK: SpeechSynthesisVoice[];
+  englishAU: SpeechSynthesisVoice[];
+  allEnglish: SpeechSynthesisVoice[];
 }
 
-export function getIndonesianVoice(): SpeechSynthesisVoice | null {
-  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return null;
-  if (cachedIndonesianVoice) return cachedIndonesianVoice;
+export function getSpeechSynth(): SpeechSynthesis | null {
+  if (typeof window !== 'undefined' && 'speechSynthesis' in window && window.speechSynthesis) {
+    return window.speechSynthesis;
+  }
+  if (
+    typeof globalThis !== 'undefined' &&
+    (globalThis as unknown as { speechSynthesis?: SpeechSynthesis }).speechSynthesis
+  ) {
+    return (globalThis as unknown as { speechSynthesis: SpeechSynthesis }).speechSynthesis;
+  }
+  return null;
+}
 
-  const voices = window.speechSynthesis.getVoices();
-  const indonesianVoices = voices.filter(
+/**
+ * Mengelompokkan seluruh suara yang tersedia di browser pengguna berdasarkan aksen & bahasa.
+ */
+export function getAvailableVoicesGrouped(): GroupedVoices {
+  const synth = getSpeechSynth();
+  if (!synth) {
+    return {
+      indonesian: [],
+      englishUS: [],
+      englishUK: [],
+      englishAU: [],
+      allEnglish: [],
+    };
+  }
+
+  const voices = synth.getVoices();
+  const indonesian = voices.filter(
     (v) =>
       v.lang.startsWith('id') ||
       v.lang.includes('ID') ||
       v.name.toLowerCase().includes('indonesia')
   );
 
+  const allEnglish = voices.filter((v) => v.lang.startsWith('en'));
+  const englishUS = allEnglish.filter(
+    (v) => v.lang === 'en-US' || v.lang.toLowerCase().includes('us') || v.name.toLowerCase().includes('united states')
+  );
+  const englishUK = allEnglish.filter(
+    (v) =>
+      v.lang === 'en-GB' ||
+      v.lang.toLowerCase().includes('gb') ||
+      v.lang.toLowerCase().includes('uk') ||
+      v.name.toLowerCase().includes('united kingdom')
+  );
+  const englishAU = allEnglish.filter(
+    (v) => v.lang === 'en-AU' || v.lang.toLowerCase().includes('au') || v.name.toLowerCase().includes('australia')
+  );
+
+  return {
+    indonesian,
+    englishUS,
+    englishUK,
+    englishAU,
+    allEnglish,
+  };
+}
+
+/**
+ * Memilih suara bahasa Inggris terbaik berdasarkan preferensi aksen (US, UK, AU)
+ * atau nama suara kustom pengguna.
+ */
+export function getEnglishVoice(
+  preferredAccent?: EnglishAccentChoice,
+  customVoiceName?: string
+): SpeechSynthesisVoice | null {
+  const synth = getSpeechSynth();
+  if (!synth) return null;
+
+  const voices = synth.getVoices();
+  const englishVoices = voices.filter((v) => v.lang.startsWith('en'));
+  if (englishVoices.length === 0) return null;
+
+  let prefs = null;
+  try {
+    prefs = getUserPreferences();
+  } catch {
+    // fallback if outside browser storage
+  }
+
+  const targetVoiceName = customVoiceName || prefs?.customEnglishVoice;
+  const accent = preferredAccent || prefs?.englishAccent || 'auto';
+
+  // 1. Jika pengguna memilih nama suara spesifik
+  if (targetVoiceName && targetVoiceName !== 'auto') {
+    const matched = englishVoices.find((v) => v.name === targetVoiceName);
+    if (matched) return matched;
+  }
+
+  // 2. Filter pool kandidat berdasarkan aksen
+  let candidatePool = englishVoices;
+  if (accent === 'uk') {
+    const ukPool = englishVoices.filter(
+      (v) =>
+        v.lang === 'en-GB' ||
+        v.lang.toLowerCase().includes('gb') ||
+        v.lang.toLowerCase().includes('uk') ||
+        v.name.toLowerCase().includes('united kingdom')
+    );
+    if (ukPool.length > 0) candidatePool = ukPool;
+  } else if (accent === 'au') {
+    const auPool = englishVoices.filter(
+      (v) =>
+        v.lang === 'en-AU' ||
+        v.lang.toLowerCase().includes('au') ||
+        v.name.toLowerCase().includes('australia')
+    );
+    if (auPool.length > 0) candidatePool = auPool;
+  } else if (accent === 'us') {
+    const usPool = englishVoices.filter(
+      (v) =>
+        v.lang === 'en-US' ||
+        v.lang.toLowerCase().includes('us') ||
+        v.name.toLowerCase().includes('united states')
+    );
+    if (usPool.length > 0) candidatePool = usPool;
+  }
+
+  // 3. Prioritaskan suara natural berkualitas tinggi
+  const preferredVoice =
+    candidatePool.find(
+      (v) =>
+        v.name.includes('Natural') ||
+        v.name.includes('Google') ||
+        v.name.includes('Jenny') ||
+        v.name.includes('Guy') ||
+        v.name.includes('Aria') ||
+        v.name.includes('Sonia') ||
+        v.name.includes('Ryan') ||
+        v.name.includes('Natasha') ||
+        v.name.includes('Samantha') ||
+        v.name.includes('Daniel')
+    ) || candidatePool[0];
+
+  return preferredVoice || englishVoices[0];
+}
+
+/**
+ * Memilih suara bahasa Indonesia terbaik berdasarkan nama suara kustom pengguna atau kualitas natural.
+ */
+export function getIndonesianVoice(customVoiceName?: string): SpeechSynthesisVoice | null {
+  const synth = getSpeechSynth();
+  if (!synth) return null;
+
+  const voices = synth.getVoices();
+  const indonesianVoices = voices.filter(
+    (v) =>
+      v.lang.startsWith('id') ||
+      v.lang.includes('ID') ||
+      v.name.toLowerCase().includes('indonesia')
+  );
+  if (indonesianVoices.length === 0) return null;
+
+  let prefs = null;
+  try {
+    prefs = getUserPreferences();
+  } catch {
+    // ignore
+  }
+
+  const targetVoiceName = customVoiceName || prefs?.customIndonesianVoice;
+
+  // 1. Jika pengguna memilih nama suara spesifik
+  if (targetVoiceName && targetVoiceName !== 'auto') {
+    const matched = indonesianVoices.find((v) => v.name === targetVoiceName);
+    if (matched) return matched;
+  }
+
+  // 2. Prioritas suara natural Indonesia
   const preferredVoice =
     indonesianVoices.find(
       (v) =>
@@ -117,17 +261,13 @@ export function getIndonesianVoice(): SpeechSynthesisVoice | null {
         v.name.includes('Andika')
     ) || indonesianVoices[0];
 
-  if (preferredVoice) cachedIndonesianVoice = preferredVoice;
-  return preferredVoice || null;
+  return preferredVoice || indonesianVoices[0];
 }
 
 // Inisialisasi daftar voice saat siap di browser
 if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
   window.speechSynthesis.onvoiceschanged = () => {
-    cachedEnglishVoice = null;
-    cachedIndonesianVoice = null;
-    getEnglishVoice();
-    getIndonesianVoice();
+    getAvailableVoicesGrouped();
   };
 }
 
@@ -148,7 +288,7 @@ const INDONESIAN_KEYWORDS = new Set([
   'besok', 'halo', 'jangan', 'cermati', 'pembahasannya', 'perhatikan', 'contoh',
   'tanya', 'negatif', 'positif', 'fakta', 'umum', 'pasangkan', 'titik', 'lemah',
   'salam', 'mari', 'bedah', 'presisi', 'tetap', 'konsisten', 'petualangan',
-  'petunjuk', 'lengkapilah', 'ubah'
+  'petunjuk', 'lengkapilah', 'ubah', 'contohnya'
 ]);
 
 const ENGLISH_KEYWORDS = new Set([
@@ -160,7 +300,8 @@ const ENGLISH_KEYWORDS = new Set([
   'morning', 'food', 'breakfast', 'spicy', 'earth', 'sun', 'sky', 'water',
   'awesome', 'job', 'streak', 'fire', 'practice', 'makes', 'perfect', 'effort',
   'focus', 'great', 'during', 'pull', 'request', 'review', 'code', 'quality',
-  'revolves', 'around', 'rarely', 'goes', 'bed', 'before', 'midnight'
+  'revolves', 'around', 'rarely', 'goes', 'bed', 'before', 'midnight', 'go',
+  'gone', 'going', 'drink', 'drinking', 'irregular', 'regular', 'verb', 'past', 'tense'
 ]);
 
 /**
@@ -204,7 +345,7 @@ export function detectLanguage(text: string): 'id' | 'en' {
 }
 
 // ============================================================================
-// BILINGUAL SEGMENTATION & EXTRACTION
+// BILINGUAL SEGMENTATION & ADAPTIVE CODE-SWITCHING
 // ============================================================================
 
 export interface SpeechSegment {
@@ -214,78 +355,114 @@ export interface SpeechSegment {
 
 /**
  * Memecah kalimat penjelasan / petunjuk bilingual menjadi segmen-segmen
- * bahasa yang terpisah (id-ID vs en-US) sehingga browser menggunakan aksen
- * yang tepat untuk masing-masing bagian.
+ * bahasa yang terpisah (id-ID vs en-US) dengan adaptasi penuh terhadap tanda kutip,
+ * tanda kurung kata bahasa Inggris, serta kosakata bahasa Inggris dalam kalimat Indonesia.
  */
 export function splitBilingualSegments(text: string): SpeechSegment[] {
   const clean = text.replace(/[*#]/g, ' ').replace(/\s+/g, ' ').trim();
   if (!clean) return [];
 
-  // Tangkap teks di dalam tanda kutip (quotes): "...", '...', “...”, ‘...’, `...`
-  const quoteRegex = /["'“‘`]([^"'”’`]+)["'”’`]/g;
+  // 1. Ekstraksi segmen tanda kutip "...", '...', “...”, ‘...’, `...` ATAU kurung (...)
+  const tokenRegex = /(["'“‘`][^"'”’`]+["'”’`])|(\([^)]{1,60}\))/g;
   const segments: SpeechSegment[] = [];
 
   let lastIndex = 0;
   let match: RegExpExecArray | null;
 
-  while ((match = quoteRegex.exec(clean)) !== null) {
+  while ((match = tokenRegex.exec(clean)) !== null) {
     const beforeText = clean.substring(lastIndex, match.index).trim();
-    const quotedText = match[1].trim();
+    const matchedToken = match[0].trim();
 
     if (beforeText) {
       const sanitizedBefore = beforeText.replace(/[:\-–—]+$/, '').trim();
       if (sanitizedBefore) {
-        const lang = detectLanguage(sanitizedBefore) === 'id' ? 'id-ID' : 'en-US';
-        segments.push({ text: sanitizedBefore, lang });
+        // Cek apakah ada kata bahasa Inggris yang terisolasi dalam bagian sebelum token
+        appendAdaptedSegments(segments, sanitizedBefore);
       }
     }
 
-    if (quotedText) {
-      // Hilangkan simbol blank underscore (misal: "She _____ coffee" -> "She coffee")
-      const sanitizedQuoted = quotedText.replace(/_+/g, '').replace(/\s+/g, ' ').trim();
-      if (sanitizedQuoted) {
-        const lang = detectLanguage(sanitizedQuoted) === 'id' ? 'id-ID' : 'en-US';
-        segments.push({ text: sanitizedQuoted, lang });
+    if (matchedToken) {
+      // Hilangkan tanda kutip atau tanda kurung
+      const innerText = matchedToken
+        .replace(/^["'“‘`\(]|["'”’`\)]$/g, '')
+        .replace(/_+/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      if (innerText) {
+        const lang = detectLanguage(innerText) === 'id' ? 'id-ID' : 'en-US';
+        segments.push({ text: innerText, lang });
       }
     }
 
-    lastIndex = quoteRegex.lastIndex;
+    lastIndex = tokenRegex.lastIndex;
   }
 
   const remaining = clean.substring(lastIndex).trim();
   if (remaining) {
     const sanitizedRemaining = remaining.replace(/^[:\-–—]+/, '').trim();
     if (sanitizedRemaining) {
-      const lang = detectLanguage(sanitizedRemaining) === 'id' ? 'id-ID' : 'en-US';
-      segments.push({ text: sanitizedRemaining, lang });
+      appendAdaptedSegments(segments, sanitizedRemaining);
     }
   }
 
-  // Jika tidak ditemukan tanda kutip, periksa pemisah titik dua (colon)
+  // Jika tidak ditemukan tanda kutip atau kurung
   if (segments.length === 0) {
     if (clean.includes(':')) {
       const parts = clean.split(':');
       const p1 = parts[0].trim();
       const p2 = parts.slice(1).join(':').trim();
       if (p1 && p2) {
-        segments.push({
-          text: p1,
-          lang: detectLanguage(p1) === 'id' ? 'id-ID' : 'en-US',
-        });
-        segments.push({
-          text: p2.replace(/_+/g, '').replace(/\s+/g, ' ').trim(),
-          lang: detectLanguage(p2) === 'id' ? 'id-ID' : 'en-US',
-        });
+        appendAdaptedSegments(segments, p1);
+        appendAdaptedSegments(segments, p2.replace(/_+/g, '').replace(/\s+/g, ' ').trim());
         return segments;
       }
     }
 
-    // Teks satu bahasa
-    const lang = detectLanguage(clean) === 'id' ? 'id-ID' : 'en-US';
-    segments.push({ text: clean, lang });
+    // Adaptasikan teks biasa jika terdapat kata Inggris dalam kalimat Indonesia
+    appendAdaptedSegments(segments, clean);
   }
 
   return segments;
+}
+
+/**
+ * Membantu membagi teks yang mayoritas Indonesia tetapi mengandung kata kunci/kata kerja bahasa Inggris
+ * (seperti: "kata went adalah bentuk lampau dari go")
+ */
+function appendAdaptedSegments(targetList: SpeechSegment[], rawText: string) {
+  const isOverallIndo = detectLanguage(rawText) === 'id';
+  if (!isOverallIndo) {
+    targetList.push({ text: rawText, lang: 'en-US' });
+    return;
+  }
+
+  // Jika mayoritas bahasa Indonesia, periksa apakah terdapat token bahasa Inggris khas
+  // seperti kata 'went', 'go', 'drinks', 'past tense' yang berdiri sendiri
+  const words = rawText.split(/\s+/);
+  let currentBuffer: string[] = [];
+
+  for (const word of words) {
+    const normalized = word.toLowerCase().replace(/[^\w]/g, '');
+    const isSpecialEnglishWord =
+      ENGLISH_KEYWORDS.has(normalized) &&
+      !INDONESIAN_KEYWORDS.has(normalized) &&
+      normalized.length > 1;
+
+    if (isSpecialEnglishWord) {
+      if (currentBuffer.length > 0) {
+        targetList.push({ text: currentBuffer.join(' '), lang: 'id-ID' });
+        currentBuffer = [];
+      }
+      targetList.push({ text: word, lang: 'en-US' });
+    } else {
+      currentBuffer.push(word);
+    }
+  }
+
+  if (currentBuffer.length > 0) {
+    targetList.push({ text: currentBuffer.join(' '), lang: 'id-ID' });
+  }
 }
 
 /**
@@ -327,6 +504,8 @@ export interface SpeechOptions {
   lang?: 'en-US' | 'id-ID' | 'auto';
   rate?: number; // Kecepatan suara: 0.6x (turtle) sampai 1.2x
   pitch?: number;
+  preferredAccent?: EnglishAccentChoice;
+  customVoiceName?: string;
   onStart?: () => void;
   onEnd?: () => void;
 }
@@ -346,8 +525,8 @@ export function stopSpeech() {
 
 /**
  * Mengucapkan teks bilingual dengan antrean bergantian:
- * Bagian bahasa Indonesia diucapkan dengan suara id-ID alami,
- * dan bagian bahasa Inggris diucapkan dengan suara en-US native.
+ * Bagian bahasa Indonesia diucapkan dengan suara id-ID alami (disesuaikan dengan preferensi user),
+ * dan bagian bahasa Inggris diucapkan dengan suara en-US/UK/AU native (disesuaikan dengan preferensi user).
  */
 export function speakBilingualText(text: string, options: SpeechOptions = {}) {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
@@ -378,10 +557,10 @@ export function speakBilingualText(text: string, options: SpeechOptions = {}) {
     utterance.pitch = options.pitch ?? 1.0;
 
     if (seg.lang === 'id-ID') {
-      const idVoice = getIndonesianVoice();
+      const idVoice = getIndonesianVoice(options.customVoiceName);
       if (idVoice) utterance.voice = idVoice;
     } else {
-      const enVoice = getEnglishVoice();
+      const enVoice = getEnglishVoice(options.preferredAccent, options.customVoiceName);
       if (enVoice) utterance.voice = enVoice;
     }
 
@@ -410,7 +589,7 @@ export function speakBilingualText(text: string, options: SpeechOptions = {}) {
 /**
  * Fungsi utama pengucap suara (TTS):
  * Secara otomatis mendeteksi bahasa teks dan memilih suara asli (native)
- * bahasa Indonesia atau bahasa Inggris tanpa memaksakan aksen asing.
+ * bahasa Indonesia atau aksen bahasa Inggris pilihan (US, UK, AU) tanpa memaksakan aksen asing.
  */
 export function speakText(text: string, options: SpeechOptions = {}) {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
@@ -432,7 +611,10 @@ export function speakText(text: string, options: SpeechOptions = {}) {
     utterance.rate = options.rate ?? (options.lang === 'id-ID' ? 1.0 : 0.95);
     utterance.pitch = options.pitch ?? 1.0;
 
-    const voice = options.lang === 'id-ID' ? getIndonesianVoice() : getEnglishVoice();
+    const voice =
+      options.lang === 'id-ID'
+        ? getIndonesianVoice(options.customVoiceName)
+        : getEnglishVoice(options.preferredAccent, options.customVoiceName);
     if (voice) utterance.voice = voice;
 
     if (options.onStart) utterance.onstart = () => options.onStart?.();
@@ -445,7 +627,7 @@ export function speakText(text: string, options: SpeechOptions = {}) {
     return;
   }
 
-  // Mode Auto: gunakan pembagian segmen bilingual cerdas
+  // Mode Auto: gunakan pembagian segmen bilingual adaptif
   speakBilingualText(text, options);
 }
 

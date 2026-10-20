@@ -1,5 +1,12 @@
-import { describe, it, expect } from 'vitest';
-import { detectLanguage, splitBilingualSegments, extractEnglishTarget } from '../speech';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import {
+  detectLanguage,
+  splitBilingualSegments,
+  extractEnglishTarget,
+  getEnglishVoice,
+  getIndonesianVoice,
+  getAvailableVoicesGrouped,
+} from '../speech';
 
 describe('Speech Synthesis Bilingual Routing Engine', () => {
   describe('detectLanguage()', () => {
@@ -23,7 +30,7 @@ describe('Speech Synthesis Bilingual Routing Engine', () => {
     });
   });
 
-  describe('splitBilingualSegments()', () => {
+  describe('splitBilingualSegments() with Adaptive Code-Switching', () => {
     it('splits question prompts with Indonesian instructions and English quotes', () => {
       const prompt = 'Pilihlah bentuk kata kerja yang tepat: "She _____ coffee every morning."';
       const segments = splitBilingualSegments(prompt);
@@ -40,12 +47,30 @@ describe('Speech Synthesis Bilingual Routing Engine', () => {
       const segments = splitBilingualSegments(explanation);
 
       expect(segments.length).toBeGreaterThanOrEqual(2);
-      const enSegments = segments.filter((s) => s.lang === 'en-US');
+      const enSegments = segments.filter((s) => s.lang.startsWith('en'));
       const idSegments = segments.filter((s) => s.lang === 'id-ID');
 
       expect(enSegments.length).toBeGreaterThan(0);
       expect(idSegments.length).toBeGreaterThan(0);
       expect(enSegments.some((s) => s.text === 'Go' || s.text === 'went')).toBe(true);
+    });
+
+    it('adapts to parentheses containing English keywords', () => {
+      const text = 'Subjek tunggal (she/he/it) membutuhkan akhiran -s pada verb dasar.';
+      const segments = splitBilingualSegments(text);
+
+      expect(segments.length).toBeGreaterThanOrEqual(2);
+      const en = segments.find((s) => s.text.includes('she/he/it') || s.text.includes('she'));
+      expect(en?.lang).toMatch(/^en/);
+    });
+
+    it('adapts to unquoted code-switched English words in Indonesian explanations', () => {
+      const text = 'Contoh kalimat dengan kata went adalah bentuk lampau dari go.';
+      const segments = splitBilingualSegments(text);
+
+      expect(segments.length).toBeGreaterThan(1);
+      const enSegments = segments.filter((s) => s.lang.startsWith('en'));
+      expect(enSegments.length).toBeGreaterThan(0);
     });
 
     it('returns a single Indonesian segment for mascot greetings', () => {
@@ -64,6 +89,69 @@ describe('Speech Synthesis Bilingual Routing Engine', () => {
       expect(segments.length).toBe(1);
       expect(segments[0].lang).toBe('en-US');
       expect(segments[0].text).toBe(text);
+    });
+  });
+
+  describe('Accent & Voice Customization Engine', () => {
+    const mockVoices = [
+      { name: 'Microsoft Jenny Online (Natural) - English (United States)', lang: 'en-US' },
+      { name: 'Google US English', lang: 'en-US' },
+      { name: 'Microsoft Sonia Online (Natural) - English (United Kingdom)', lang: 'en-GB' },
+      { name: 'Google UK English Female', lang: 'en-GB' },
+      { name: 'Microsoft Natasha Online (Natural) - English (Australia)', lang: 'en-AU' },
+      { name: 'Microsoft Gadis Online (Natural) - Indonesian (Indonesia)', lang: 'id-ID' },
+      { name: 'Microsoft Ardi Online (Natural) - Indonesian (Indonesia)', lang: 'id-ID' },
+      { name: 'Google Bahasa Indonesia', lang: 'id-ID' },
+    ] as unknown as SpeechSynthesisVoice[];
+
+    beforeEach(() => {
+      const synth = {
+        getVoices: () => mockVoices,
+        onvoiceschanged: null,
+        cancel: vi.fn(),
+        speak: vi.fn(),
+      };
+      vi.stubGlobal('speechSynthesis', synth);
+      if (typeof window !== 'undefined') {
+        Object.defineProperty(window, 'speechSynthesis', {
+          value: synth,
+          writable: true,
+          configurable: true,
+        });
+      }
+    });
+
+    it('groups voices into Indonesian, US, UK, and AU accents', () => {
+      const grouped = getAvailableVoicesGrouped();
+      expect(grouped.indonesian.length).toBe(3);
+      expect(grouped.englishUS.length).toBe(2);
+      expect(grouped.englishUK.length).toBe(2);
+      expect(grouped.englishAU.length).toBe(1);
+    });
+
+    it('selects UK accent voice when preferredAccent is uk', () => {
+      const voice = getEnglishVoice('uk');
+      expect(voice?.lang).toBe('en-GB');
+      expect(voice?.name).toContain('Sonia');
+    });
+
+    it('selects AU accent voice when preferredAccent is au', () => {
+      const voice = getEnglishVoice('au');
+      expect(voice?.lang).toBe('en-AU');
+      expect(voice?.name).toContain('Natasha');
+    });
+
+    it('selects US accent voice when preferredAccent is us', () => {
+      const voice = getEnglishVoice('us');
+      expect(voice?.lang).toBe('en-US');
+    });
+
+    it('selects specific custom voice name if requested', () => {
+      const voice = getEnglishVoice(undefined, 'Google UK English Female');
+      expect(voice?.name).toBe('Google UK English Female');
+
+      const idVoice = getIndonesianVoice('Microsoft Ardi Online (Natural) - Indonesian (Indonesia)');
+      expect(idVoice?.name).toContain('Ardi');
     });
   });
 

@@ -5,6 +5,7 @@
 export type MascotChoice = 'boy' | 'girl' | 'lily' | 'arthur';
 export type LearningFocus = 'balanced' | 'grammar' | 'review' | 'vocab';
 export type AudioSpeedChoice = 0.8 | 0.95 | 1.1;
+export type EnglishAccentChoice = 'us' | 'uk' | 'au' | 'auto';
 
 export interface CompanionInfo {
   id: MascotChoice;
@@ -66,6 +67,9 @@ export interface UserPreferences {
   autoPronounce: boolean;
   learningFocus: LearningFocus;
   soundEffectsEnabled: boolean;
+  englishAccent: EnglishAccentChoice;
+  customEnglishVoice: string; // 'auto' | exact name
+  customIndonesianVoice: string; // 'auto' | exact name
 }
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
@@ -75,6 +79,9 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   autoPronounce: false,
   learningFocus: 'balanced',
   soundEffectsEnabled: true,
+  englishAccent: 'auto',
+  customEnglishVoice: 'auto',
+  customIndonesianVoice: 'auto',
 };
 
 const STORAGE_KEY = 'fluenzy_user_preferences_v1';
