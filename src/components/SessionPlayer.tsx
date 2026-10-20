@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   Heart,
   X,
@@ -17,13 +18,19 @@ import {
   Gauge,
   Lightbulb,
   Sliders,
+  Play,
+  Pause,
+  ChevronRight,
+  Headphones,
+  Shield,
+  Gem,
 } from 'lucide-react';
-import { StandingMascot, MascotMood } from '@/components/StandingMascot';
 import { PersonalizationModal } from '@/components/PersonalizationModal';
-import { getUserPreferences } from '@/lib/core/preferences';
+import { getUserPreferences, getCompanionInfo, MascotChoice } from '@/lib/core/preferences';
 import {
   speakText,
   speakWord,
+  speakTurtleMode,
   playBubblePop,
   playCelebrationSound,
 } from '@/lib/audio/speech';
@@ -61,31 +68,34 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Audio & Kecepatan Suara
-  const [speechRate, setSpeechRate] = useState<number>(() => {
-    if (typeof window !== 'undefined') {
-      return getUserPreferences().audioSpeed;
-    }
-    return 0.95;
-  });
-  const [isTalking, setIsTalking] = useState<boolean>(false);
+  // Companion & Audio Speed
+  const [mascotChoice, setMascotChoice] = useState<MascotChoice>('lily');
+  const [speechRate, setSpeechRate] = useState<number>(0.95);
+  const [isTurtleMode, setIsTurtleMode] = useState<boolean>(false);
+  const [isPlayingAudio, setIsPlayingAudio] = useState<boolean>(false);
   const [isPersonalizationOpen, setIsPersonalizationOpen] = useState(false);
 
   useEffect(() => {
+    const prefs = getUserPreferences();
+    setMascotChoice(prefs.mascot);
+    setSpeechRate(prefs.audioSpeed);
+
     const handlePrefChange = (e: Event) => {
       const customEvent = e as CustomEvent;
-      if (customEvent.detail?.audioSpeed) {
-        setSpeechRate(customEvent.detail.audioSpeed);
+      if (customEvent.detail) {
+        if (customEvent.detail.mascot) setMascotChoice(customEvent.detail.mascot);
+        if (customEvent.detail.audioSpeed) setSpeechRate(customEvent.detail.audioSpeed);
       }
     };
     window.addEventListener('fluenzy-preferences-updated', handlePrefChange);
     return () => window.removeEventListener('fluenzy-preferences-updated', handlePrefChange);
   }, []);
 
-  // Status Maskot
-  const [mascotMood, setMascotMood] = useState<MascotMood>('idle');
-  const [mascotMessage, setMascotMessage] = useState<string | null>(
-    'Semangat! Aku siap menemanimu belajar!'
+  const companion = getCompanionInfo(mascotChoice);
+
+  // Companion Message
+  const [companionMessage, setCompanionMessage] = useState<string>(
+    'Ayo mulai! Aku siap mendampingimu!'
   );
 
   // Jawaban & State Interaktif
@@ -119,20 +129,21 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
   const [correctCount, setCorrectCount] = useState(0);
   const [heartsOut, setHeartsOut] = useState(false);
 
-  const startTimeRef = useRef<number>(0);
+  // Pengukuran Waktu Respons
+  const startTimeRef = useRef<number>(Date.now());
 
-  // Ambil butir soal sesi
+  // Ambil data soal dari server
   useEffect(() => {
     async function fetchQuestions() {
       try {
         setLoading(true);
         const url = `/api/session/questions?mode=${mode}${lessonId ? `&lessonId=${lessonId}` : ''}`;
         const res = await fetch(url);
-        if (!res.ok) throw new Error('Gagal mengambil soal');
-        const json = await res.json();
-        setQuestions(json.questions || []);
+        if (!res.ok) throw new Error('Gagal mengambil daftar soal.');
+        const data = await res.json();
+        setQuestions(data.questions || []);
       } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
+        setError(err instanceof Error ? err.message : 'Terjadi kesalahan sistem.');
       } finally {
         setLoading(false);
       }
@@ -140,62 +151,65 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
     fetchQuestions();
   }, [mode, lessonId]);
 
-  // Siapkan soal saat indeks berubah
+  // Reset state saat berganti soal
+  const currentQ = questions[currentIndex];
   useEffect(() => {
-    if (questions.length > 0 && currentIndex < questions.length) {
-      const q = questions[currentIndex];
-      setSelectedOption('');
-      setTextAnswer('');
-      setFeedback(null);
-      setMascotMood('idle');
-      setMascotMessage('Pilih atau susun jawaban yang paling tepat ya!');
-      startTimeRef.current = Date.now();
+    if (!currentQ) return;
+    startTimeRef.current = Date.now();
+    setSelectedOption('');
+    setTextAnswer('');
+    setFeedback(null);
+    setIsPlayingAudio(false);
 
+    // Siapkan token untuk word_order
+    if (currentQ.type === 'word_order') {
       try {
-        const payload = JSON.parse(q.payload);
-        if (q.type === 'word_order' && payload.tokens) {
-          // Acak token kata untuk disortir
-          const shuffled = [...payload.tokens].sort(() => Math.random() - 0.5);
-          setAvailableTokens(shuffled);
-          setWordOrderTokens([]);
-        }
+        const payload = JSON.parse(currentQ.payload);
+        const tokens: string[] = payload.tokens || [];
+        setAvailableTokens([...tokens].sort(() => Math.random() - 0.5));
+        setWordOrderTokens([]);
       } catch {
         setAvailableTokens([]);
+        setWordOrderTokens([]);
       }
     }
-  }, [currentIndex, questions]);
 
-  const currentQ = questions[currentIndex];
+    setCompanionMessage(
+      companion.id === 'arthur' || companion.id === 'boy'
+        ? 'Fokus pada pola kalimat dan struktur teknisnya.'
+        : 'Kamu pasti bisa! Sedikit demi sedikit, pasti bisa!'
+    );
+  }, [currentIndex, currentQ, companion]);
 
-  // Putar Pengucapan Soal / Prompt
-  function handleSpeakPrompt(rate: number = 1.0) {
+  // Audio Playback
+  function handlePlayAudio() {
     if (!currentQ) return;
     playBubblePop();
-    setIsTalking(true);
-    setMascotMood('talking');
-    setMascotMessage('Dengarkan pelafalan kalimat ini baik-baik...');
-
-    speakText(currentQ.prompt, {
-      rate,
-      onStart: () => setIsTalking(true),
-      onEnd: () => {
-        setIsTalking(false);
-        setMascotMood('idle');
-      },
-    });
+    setIsPlayingAudio(true);
+    const textToSpeak = currentQ.prompt;
+    if (isTurtleMode) {
+      speakTurtleMode(textToSpeak, {
+        onEnd: () => setIsPlayingAudio(false),
+      });
+    } else {
+      speakText(textToSpeak, {
+        rate: speechRate,
+        onEnd: () => setIsPlayingAudio(false),
+      });
+    }
   }
 
   // Kirim Jawaban
   async function handleSubmitAnswer() {
-    if (!currentQ || isEvaluating) return;
+    if (isEvaluating || feedback || !currentQ) return;
 
     let finalUserAnswer = '';
     if (currentQ.type === 'multiple_choice') {
       finalUserAnswer = selectedOption;
+    } else if (currentQ.type === 'fill_blank') {
+      finalUserAnswer = textAnswer.trim();
     } else if (currentQ.type === 'word_order') {
       finalUserAnswer = wordOrderTokens.join(' ');
-    } else {
-      finalUserAnswer = textAnswer.trim();
     }
 
     if (!finalUserAnswer) return;
@@ -226,11 +240,9 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
         setCelebrationTitle(randomTitle);
         setCorrectCount((prev) => prev + 1);
         setTotalXpEarned((prev) => prev + (result.xpEarned || 10));
-        setMascotMood('celebrate');
-        setMascotMessage(randomTitle);
+        setCompanionMessage(randomTitle);
       } else {
-        setMascotMood('encouraging');
-        setMascotMessage('Jangan khawatir! Cermati pembahasannya ya.');
+        setCompanionMessage('Jangan khawatir! Cermati pembahasannya ya.');
         if (!result.canContinueSession) {
           setHeartsOut(true);
         }
@@ -245,6 +257,7 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
   // Lanjut ke soal berikutnya
   function handleNextQuestion() {
     if (currentIndex + 1 < questions.length) {
+      playBubblePop();
       setCurrentIndex((prev) => prev + 1);
     } else {
       playCelebrationSound();
@@ -252,71 +265,67 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
     }
   }
 
+  // LOADING STATE
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-emerald-50 via-teal-50 to-sky-50 dark:from-slate-950 dark:to-slate-900 p-6">
-        <div className="rounded-3xl bg-white/90 dark:bg-slate-900/90 p-8 shadow-xl border-2 border-emerald-200 dark:border-emerald-800 text-center space-y-4 max-w-sm">
-          <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
-          <h3 className="font-extrabold text-slate-900 dark:text-slate-100">Memuat Sesi Adaptif</h3>
-          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-            Menyiapkan materi personalisasi berdasarkan tingkat penguasaanmu...
+      <div className="flex min-h-screen items-center justify-center bg-[#080E15] text-white p-6">
+        <div className="card-cyber p-8 text-center space-y-4 max-w-sm">
+          <div className="inline-block h-10 w-10 animate-spin rounded-full border-4 border-emerald-400 border-t-transparent" />
+          <h3 className="font-extrabold text-white text-base">Menyiapkan Sesi Belajar</h3>
+          <p className="text-xs text-slate-400">
+            Menghubungkan AI Adaptive Engine & materi personalisasi...
           </p>
         </div>
       </div>
     );
   }
 
+  // ERROR OR EMPTY STATE
   if (error || questions.length === 0) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-emerald-50 via-teal-50 to-sky-50 dark:from-slate-950 dark:to-slate-900 p-6">
-        <div className="max-w-md rounded-3xl bg-white dark:bg-slate-900 p-8 text-center shadow-xl border-2 border-slate-200 dark:border-slate-800">
-          <AlertCircle className="mx-auto h-12 w-12 text-amber-500 mb-4" />
-          <h2 className="text-xl font-black text-slate-900 dark:text-slate-100">
-            Belum Ada Soal Tersedia
-          </h2>
-          <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+      <div className="flex min-h-screen items-center justify-center bg-[#080E15] text-white p-6">
+        <div className="card-cyber max-w-md p-8 text-center space-y-4">
+          <AlertCircle className="mx-auto h-12 w-12 text-amber-400" />
+          <h2 className="text-xl font-black text-white">Belum Ada Soal Tersedia</h2>
+          <p className="text-xs text-slate-400">
             {error || 'Bank soal untuk kategori ini sedang kosong.'}
           </p>
           <Link
-            href="/dashboard"
-            className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-emerald-600 hover:bg-emerald-700 border-b-4 border-emerald-800 active:translate-y-1 active:border-b-0 px-6 py-3 text-sm font-black text-white shadow-md transition"
+            href="/roadmap"
+            className="btn-neon-pill px-6 py-3 text-xs"
           >
-            Kembali ke Dashboard
+            Kembali ke Roadmap
           </Link>
         </div>
       </div>
     );
   }
 
-  // =========================================================================
-  // MODAL HATI HABIS
-  // =========================================================================
+  // HEARTS OUT MODAL
   if (heartsOut) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
-        <div className="w-full max-w-md rounded-3xl bg-white dark:bg-slate-900 p-8 text-center shadow-2xl border-2 border-rose-300 dark:border-rose-900 space-y-5 animate-in zoom-in-95 duration-200">
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-rose-100 dark:bg-rose-950 text-rose-500 shadow-inner">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+        <div className="card-cyber w-full max-w-md p-8 text-center space-y-5 border-rose-500/50 shadow-[0_0_30px_rgba(244,63,94,0.3)]">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-rose-500/20 text-rose-400 border border-rose-500/40 shadow-[0_0_20px_rgba(244,63,94,0.3)]">
             <Heart className="h-10 w-10 fill-rose-500 animate-pulse" />
           </div>
           <div>
-            <h2 className="text-2xl font-black text-slate-900 dark:text-slate-100">
-              Hatimu Telah Habis!
-            </h2>
-            <p className="mt-2 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-              Jangan khawatir. Kamu dapat beristirahat (1 hati teregenerasi per 30 menit) atau lanjut berlatih tanpa risiko kehilangan hati.
+            <h2 className="text-2xl font-black text-white">Hatimu Telah Habis!</h2>
+            <p className="mt-2 text-xs text-slate-300 leading-relaxed">
+              Kamu bisa beristirahat sejenak atau melanjutkan latihan tanpa risiko kehilangan hati di Practice Arena.
             </p>
           </div>
           <div className="space-y-3 pt-2">
             <Link
               href="/practice/weakness"
-              className="w-full flex items-center justify-center gap-2 rounded-2xl bg-amber-500 hover:bg-amber-600 border-b-4 border-amber-700 active:translate-y-1 active:border-b-0 py-3.5 text-sm font-black text-white shadow-md transition"
+              className="btn-neon-pill w-full py-3 text-xs gap-2"
             >
               <Sparkles className="h-4 w-4" />
-              Latihan Titik Lemah (Bebas Risiko)
+              Latihan Titik Lemah (Zero Risk ❤️)
             </Link>
             <Link
               href="/dashboard"
-              className="w-full flex items-center justify-center gap-2 rounded-2xl border-2 border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 py-3.5 text-sm font-bold text-slate-700 dark:text-slate-300 transition"
+              className="btn-cyber-pill w-full py-3 text-xs"
             >
               Kembali ke Dashboard
             </Link>
@@ -326,50 +335,47 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
     );
   }
 
-  // =========================================================================
-  // LAYAR SESI SELESAI
-  // =========================================================================
+  // SESSION COMPLETED CELEBRATION
   if (sessionCompleted) {
     const accuracy = Math.round((correctCount / questions.length) * 100);
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-emerald-50 via-teal-50 to-sky-50 dark:from-slate-950 dark:to-slate-900 p-6">
-        <div className="w-full max-w-lg rounded-3xl bg-white dark:bg-slate-900 p-8 text-center shadow-2xl border-2 border-emerald-300 dark:border-emerald-800 space-y-6">
-          {/* Standing Character Merayakan */}
+      <div className="flex min-h-screen items-center justify-center bg-[#080E15] text-white p-6">
+        <div className="card-cyber-glow w-full max-w-lg p-8 text-center space-y-6 shadow-[0_0_40px_rgba(0,229,117,0.2)]">
+          {/* Avatar Mentor Merayakan */}
           <div className="flex justify-center -mb-2">
-            <StandingMascot
-              size="md"
-              mood="celebrate"
-              message="Yayy! Kamu hebat sekali telah menyelesaikan sesi ini!"
-              showSpeechBubble={true}
-            />
+            <div className="relative h-24 w-24 rounded-3xl overflow-hidden border-2 border-emerald-400 bg-[#080E15] shadow-[0_0_25px_rgba(0,229,117,0.4)]">
+              <Image
+                src={companion.avatar}
+                alt={companion.name}
+                width={96}
+                height={96}
+                className="object-cover"
+              />
+            </div>
           </div>
 
           <div>
-            <span className="text-xs font-black uppercase tracking-widest text-emerald-600 bg-emerald-100 dark:bg-emerald-950 px-3 py-1 rounded-full">
+            <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
               Selesai!
             </span>
-            <h2 className="text-3xl font-black text-slate-900 dark:text-slate-100 mt-2">
+            <h2 className="text-3xl font-black text-white mt-2">
               Latihan Selesai
             </h2>
-            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mt-1">{title}</p>
+            <p className="text-xs font-semibold text-slate-400 mt-1">{title}</p>
           </div>
 
           {/* Kartu Metrik Hasil */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 border-2 border-indigo-200 dark:border-indigo-900 p-4 shadow-sm">
-              <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">
-                Total XP Didapat
-              </span>
-              <div className="text-3xl font-black text-indigo-700 dark:text-indigo-300 mt-1 flex items-center justify-center gap-1">
-                <Zap className="h-6 w-6 fill-indigo-500" />
-                +{totalXpEarned}
+            <div className="p-4 rounded-xl bg-[#0A131C] border border-[#1A2E40]">
+              <span className="text-xs font-bold text-slate-400">Total XP Didapat</span>
+              <div className="text-2xl font-black text-emerald-400 mt-1 flex items-center justify-center gap-1 font-mono">
+                <Zap className="h-5 w-5 fill-emerald-400 text-emerald-400" />
+                +{totalXpEarned} XP
               </div>
             </div>
-            <div className="rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 border-2 border-emerald-200 dark:border-emerald-900 p-4 shadow-sm">
-              <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                Akurasi Jawaban
-              </span>
-              <div className="text-3xl font-black text-emerald-700 dark:text-emerald-300 mt-1">
+            <div className="p-4 rounded-xl bg-[#0A131C] border border-[#1A2E40]">
+              <span className="text-xs font-bold text-slate-400">Akurasi Jawaban</span>
+              <div className="text-2xl font-black text-cyan-400 mt-1 font-mono">
                 {accuracy}%
               </div>
             </div>
@@ -377,24 +383,20 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
 
           <div className="flex flex-col gap-3 pt-2">
             <Link
-              href="/dashboard"
-              className="w-full flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 hover:bg-emerald-700 border-b-4 border-emerald-800 active:translate-y-1 active:border-b-0 py-3.5 text-sm font-black text-white shadow-md transition"
-            >
-              Lihat Pembaruan di Dashboard
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link
               href="/roadmap"
-              className="w-full flex items-center justify-center gap-2 rounded-2xl bg-sky-500 hover:bg-sky-600 border-b-4 border-sky-700 active:translate-y-1 active:border-b-0 py-3.5 text-sm font-black text-white shadow-md transition"
+              onClick={() => playBubblePop()}
+              className="btn-neon-pill w-full py-3.5 text-xs gap-2"
             >
-              Buka Roadmap 50 Stage
+              <span>Melangkah di Roadmap 50 Stage</span>
               <ArrowRight className="h-4 w-4" />
             </Link>
             <Link
-              href="/mistakes"
-              className="w-full flex items-center justify-center gap-2 rounded-2xl border-2 border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 py-3 text-sm font-bold text-slate-700 dark:text-slate-300 transition"
+              href="/arena"
+              onClick={() => playBubblePop()}
+              className="btn-cyber-pill w-full py-3.5 text-xs gap-2"
             >
-              Review Kesalahan Sesi Ini
+              <span>Masuk ke Practice Arena</span>
+              <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
         </div>
@@ -402,9 +404,7 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
     );
   }
 
-  // =========================================================================
-  // PARSING DATA SOAL AKTIF
-  // =========================================================================
+  // PARSE OPTIONS
   let options: string[] = [];
   try {
     const payload = JSON.parse(currentQ.payload);
@@ -413,196 +413,141 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
     options = [];
   }
 
-  // Efektivitas Belajar: Pintasan Keyboard Cepat (1-4 untuk opsi, Enter untuk periksa/lanjut)
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-        if (e.key === 'Enter' && !isEvaluating) {
-          e.preventDefault();
-          if (feedback) {
-            handleNextQuestion();
-          } else if (textAnswer.trim()) {
-            handleSubmitAnswer();
-          }
-        }
-        return;
-      }
-
-      if (feedback) {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          handleNextQuestion();
-        }
-        return;
-      }
-
-      if (['1', '2', '3', '4'].includes(e.key)) {
-        const idx = parseInt(e.key, 10) - 1;
-        if (options && options[idx]) {
-          playBubblePop();
-          setSelectedOption(options[idx]);
-        }
-      } else if (e.key === 'Enter') {
-        e.preventDefault();
-        if (selectedOption || textAnswer.trim() || wordOrderTokens.length > 0) {
-          handleSubmitAnswer();
-        }
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [feedback, selectedOption, textAnswer, wordOrderTokens, isEvaluating, options]);
-
   const progressPercent = Math.round(((currentIndex + 1) / questions.length) * 100);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50/60 via-teal-50/30 to-sky-50/50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 text-slate-900 dark:text-slate-100 flex flex-col justify-between relative overflow-hidden">
-      {/* DEKORASI LATAR BELAKANG TIDAK MONOTON (AMBIENT GLOW BLOBS) */}
-      <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-emerald-400/15 dark:bg-emerald-500/10 blur-3xl pointer-events-none -z-10" />
-      <div className="absolute top-1/4 -right-32 w-96 h-96 rounded-full bg-sky-400/15 dark:bg-sky-500/10 blur-3xl pointer-events-none -z-10" />
-      <div className="absolute -bottom-32 left-1/3 w-96 h-96 rounded-full bg-indigo-400/10 dark:bg-indigo-500/10 blur-3xl pointer-events-none -z-10" />
+    <div className="min-h-screen bg-[#080E15] text-[#F8FAFC] flex flex-col justify-between relative overflow-hidden">
+      {/* AMBIENT BACKGROUND GLOWS */}
+      <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none -z-10" />
+      <div className="absolute top-1/4 -right-32 w-96 h-96 rounded-full bg-cyan-500/10 blur-3xl pointer-events-none -z-10" />
 
-      {/* 1. TOP PROGRESS BAR & CONTROLS */}
-      <header className="border-b border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md px-4 py-3 sm:px-8 shadow-xs">
+      {/* 1. TOP PROGRESS BAR & GAMIFIED STATUS (Matching Reference Image 3 Screen 5) */}
+      <header className="border-b border-[#1A2E40] bg-[#080E15]/90 backdrop-blur-md px-4 py-3 sm:px-8 sticky top-0 z-30">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
+          {/* Exit Button */}
           <Link
-            href="/dashboard"
-            className="flex h-10 w-10 items-center justify-center rounded-2xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:border-slate-300 transition shadow-xs"
+            href="/roadmap"
+            onClick={() => playBubblePop()}
+            className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#101C27] border border-[#1A2E40] text-slate-400 hover:text-white hover:border-slate-500 transition"
             title="Keluar dari sesi"
           >
             <X className="h-5 w-5" />
           </Link>
 
-          {/* Progress Bar 3D */}
-          <div className="flex-1 h-3.5 rounded-full bg-slate-200/80 dark:bg-slate-800 overflow-hidden p-0.5 border border-slate-200 dark:border-slate-700 shadow-inner">
+          {/* Progress Bar with Glowing Emerald Fill */}
+          <div className="flex-1 max-w-md h-3 rounded-full bg-[#101C27] border border-[#1A2E40] overflow-hidden p-0.5 shadow-inner">
             <div
-              className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-300 ease-out shadow-xs"
+              className="h-full bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 rounded-full transition-all duration-300 shadow-[0_0_10px_rgba(0,229,117,0.5)]"
               style={{ width: `${progressPercent}%` }}
             />
           </div>
 
-          {/* Kontrol Kecepatan Suara & Hati */}
-          <div className="flex items-center gap-3">
-            {/* Speed Pill 3D */}
-            <div className="hidden sm:flex items-center gap-1 rounded-2xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 px-2 py-1 text-[11px] font-black text-slate-600 dark:text-slate-300 shadow-xs">
-              <Gauge className="h-3.5 w-3.5 text-emerald-500" />
-              <button
-                type="button"
-                onClick={() => setSpeechRate(0.7)}
-                className={`px-2 py-0.5 rounded-xl transition ${
-                  speechRate === 0.7
-                    ? 'bg-amber-500 text-white shadow-xs'
-                    : 'hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                0.7x 🐢
-              </button>
-              <button
-                type="button"
-                onClick={() => setSpeechRate(1.0)}
-                className={`px-2 py-0.5 rounded-xl transition ${
-                  speechRate === 1.0
-                    ? 'bg-emerald-500 text-white shadow-xs'
-                    : 'hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                1.0x
-              </button>
-            </div>
+          {/* Question Counter (e.g. 1/6) */}
+          <div className="text-xs font-mono font-black text-slate-300 bg-[#101C27] px-3 py-1.5 rounded-xl border border-[#1A2E40]">
+            {currentIndex + 1} / {questions.length}
+          </div>
 
-            {/* Personalisasi Quick Button */}
-            <button
-              type="button"
-              onClick={() => {
-                playBubblePop();
-                setIsPersonalizationOpen(true);
-              }}
-              className="hidden sm:flex items-center gap-1 rounded-2xl bg-purple-500 hover:bg-purple-600 border-b-2 border-purple-700 active:translate-y-0.5 active:border-b-0 px-2.5 py-1 text-[11px] font-black text-white shadow-xs transition cursor-pointer"
-              title="Atur Personalisasi Belajar"
-            >
-              <Sliders className="h-3.5 w-3.5" />
-              <span>Personalisasi</span>
-            </button>
-
-            {/* Mode & Heart Indicator */}
+          {/* Health / Heart Status */}
+          <div className="flex items-center gap-2">
             {mode === 'weakness' ? (
-              <span className="text-xs font-black px-3 py-1.5 rounded-2xl bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200 border-2 border-amber-300 dark:border-amber-800 flex items-center gap-1.5 shadow-xs">
-                <Sparkles className="h-3.5 w-3.5 text-amber-600" />
-                Bebas Risiko
+              <span className="text-[11px] font-black px-3 py-1.5 rounded-xl bg-amber-500/15 text-amber-300 border border-amber-500/40 flex items-center gap-1.5 shadow-[0_0_10px_rgba(245,158,11,0.2)]">
+                <Sparkles className="h-3.5 w-3.5 text-amber-400" />
+                Bebas Risiko ❤️
               </span>
             ) : (
-              <div className="flex items-center gap-1.5 text-sm font-black text-rose-500 bg-rose-50 dark:bg-rose-950/60 border-2 border-rose-200 dark:border-rose-900 px-3 py-1 rounded-2xl shadow-xs">
-                <Heart className="h-5 w-5 fill-rose-500 animate-pulse" />
-                <span>{feedback?.heartsRemaining ?? 5}</span>
+              <div className="flex items-center gap-1.5 text-xs font-black text-rose-400 bg-rose-500/15 border border-rose-500/40 px-3 py-1.5 rounded-xl shadow-[0_0_10px_rgba(244,63,94,0.2)]">
+                <Heart className="h-4 w-4 fill-rose-500 animate-pulse" />
+                <span className="font-mono">{feedback?.heartsRemaining ?? 5}</span>
               </div>
             )}
           </div>
         </div>
       </header>
 
-      {/* 2. AREA SOAL + STANDING CHARACTER (2-COLUMN CLAYMORPHISM STAGE) */}
-      <main className="mx-auto flex flex-1 w-full max-w-5xl flex-col md:flex-row items-center justify-center gap-6 sm:gap-10 px-4 py-8">
-        {/* KOLOM KIRI: STANDING MASCOT PADA STAGE POD */}
-        <div className="shrink-0 flex flex-col items-center">
-          <div className="relative rounded-3xl bg-gradient-to-b from-emerald-100/70 via-teal-50/50 to-white/90 dark:from-emerald-950/40 dark:via-slate-900/40 dark:to-slate-900/80 p-5 sm:p-6 border-2 border-emerald-300/80 dark:border-emerald-800/80 shadow-xl backdrop-blur-md">
-            <StandingMascot
-              size="md"
-              mood={mascotMood}
-              isTalking={isTalking}
-              message={mascotMessage}
-              showSpeechBubble={true}
-              canSwitchCharacter={true}
-            />
+      {/* 2. LEARNING CONTENT AREA */}
+      <main className="mx-auto flex flex-1 w-full max-w-4xl flex-col items-center justify-center px-4 py-8 space-y-6">
+        {/* SKILL PILLS & LEVEL ESTIMATE HEADER */}
+        <div className="w-full flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+              {currentQ.skill?.name || 'Listening'}
+            </span>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-[#142433] text-cyan-400 border border-[#1E374D]">
+              Tech Vocab
+            </span>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-[#142433] text-purple-400 border border-[#1E374D]">
+              Grammar
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] text-slate-400 font-bold">Estimated Level:</span>
+            <span className="text-xs font-mono font-black text-emerald-400 bg-[#101C27] border border-emerald-500/30 px-2.5 py-0.5 rounded-lg shadow-[0_0_8px_rgba(0,229,117,0.2)]">
+              B1+ → B2
+            </span>
           </div>
         </div>
 
-        {/* KOLOM KANAN: KARTU SOAL AKTIF DENGAN TACTILE DEPTH */}
-        <div className="w-full max-w-xl rounded-3xl bg-white/95 dark:bg-slate-900/90 backdrop-blur-md border-2 border-slate-200/90 dark:border-slate-800 p-6 sm:p-8 shadow-xl space-y-6">
-          {/* Metadata Skill & Tingkat Kesulitan */}
-          <div className="flex items-center justify-between text-xs">
-            <span className="font-extrabold flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-3 py-1 rounded-xl">
-              <Brain className="h-3.5 w-3.5 text-emerald-600" />
-              {currentQ.skill?.name || 'Materi Bahasa Inggris'}
-            </span>
-            <span className="font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 px-2.5 py-1 rounded-xl">
-              Tingkat Kesulitan: {currentQ.difficulty}/5
-            </span>
+        {/* AUDIO PLAYER & WAVEFORM CARD (Matching Reference Image 3 Screen 5) */}
+        <div className="card-cyber w-full p-5 space-y-3">
+          <div className="flex items-center justify-between text-xs text-slate-400">
+            <span>Dengarkan percakapan berikut lalu pilih jawaban yang paling tepat.</span>
+            <button
+              type="button"
+              onClick={() => {
+                playBubblePop();
+                setIsTurtleMode(!isTurtleMode);
+              }}
+              className={`text-[10px] font-black px-2.5 py-1 rounded-full border transition cursor-pointer ${
+                isTurtleMode
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.3)]'
+                  : 'bg-[#142433] text-slate-300 border-[#1A2E40]'
+              }`}
+            >
+              🐢 Turtle Mode 0.65x {isTurtleMode ? 'ON' : 'OFF'}
+            </button>
           </div>
 
-          {/* PERTANYAAN / PROMPT DENGAN TOMBOL AUDIO SPEAKER & TURTLE */}
-          <div className="space-y-3 pt-1">
-            <div className="flex items-start gap-3">
-              {/* Tombol Speaker Normal 1.0x 3D */}
-              <button
-                type="button"
-                onClick={() => handleSpeakPrompt(speechRate)}
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-500 hover:bg-emerald-600 border-b-4 border-emerald-700 active:translate-y-1 active:border-b-0 text-white shadow-md transition group"
-                title="Dengarkan pengucapan normal"
-              >
-                <Volume2 className="h-6 w-6 group-hover:scale-110 transition-transform" />
-              </button>
+          <div className="p-3.5 rounded-xl bg-[#0A131C] border border-[#1A2E40] flex items-center gap-3.5">
+            <button
+              type="button"
+              onClick={handlePlayAudio}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold shadow-[0_0_15px_rgba(0,210,255,0.4)] transition cursor-pointer"
+              title="Putar Audio"
+            >
+              {isPlayingAudio ? (
+                <Pause className="h-5 w-5" />
+              ) : (
+                <Play className="h-5 w-5 fill-slate-950 ml-0.5" />
+              )}
+            </button>
 
-              {/* Tombol Speaker Lambat 0.65x (Turtle Mode) 3D */}
-              <button
-                type="button"
-                onClick={() => handleSpeakPrompt(0.65)}
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-500 hover:bg-amber-600 border-b-4 border-amber-700 active:translate-y-1 active:border-b-0 text-white shadow-md transition text-lg"
-                title="Dengarkan pengucapan lambat (Turtle mode)"
-              >
-                🐢
-              </button>
-
-              {/* Teks Prompt */}
-              <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 leading-snug pt-1">
-                {currentQ.prompt}
-              </h2>
+            {/* Dynamic Waveform */}
+            <div className="flex-1 flex items-center gap-1.5 h-8">
+              {[40, 70, 85, 55, 95, 65, 45, 80, 60, 35, 75, 90, 50, 65, 80, 40].map((h, i) => (
+                <div
+                  key={i}
+                  style={{ height: isPlayingAudio ? `${h}%` : '25%' }}
+                  className={`flex-1 rounded-full transition-all duration-150 ${
+                    isPlayingAudio ? 'bg-cyan-400 shadow-[0_0_6px_rgba(0,210,255,0.5)]' : 'bg-slate-700'
+                  }`}
+                />
+              ))}
             </div>
+
+            <span className="text-xs font-mono text-slate-400">1:24</span>
           </div>
 
-          {/* TIPE 1: PILIHAN GANDA (MULTIPLE CHOICE) DENGAN TACTILE 3D BUTTONS */}
+          <h2 className="text-lg sm:text-xl font-bold text-white pt-1">
+            {currentQ.prompt}
+          </h2>
+        </div>
+
+        {/* QUESTION INPUTS (MULTIPLE CHOICE, WORD ORDER, OR FILL BLANK) */}
+        <div className="w-full">
+          {/* TIPE 1: MULTIPLE CHOICE */}
           {currentQ.type === 'multiple_choice' && (
-            <div className="grid grid-cols-1 gap-3.5 pt-2">
+            <div className="grid grid-cols-1 gap-3">
               {options.map((opt, idx) => {
                 const isSelected = selectedOption === opt;
                 return (
@@ -615,18 +560,18 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
                       setSelectedOption(opt);
                       speakWord(opt, speechRate);
                     }}
-                    className={`flex items-center justify-between rounded-2xl px-5 py-4 text-left font-black transition-all ${
+                    className={`p-4 rounded-xl border text-left transition flex items-center justify-between cursor-pointer ${
                       isSelected
-                        ? 'border-2 border-emerald-500 border-b-4 border-b-emerald-700 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-900 dark:text-emerald-100 shadow-md scale-[1.01]'
-                        : 'border-2 border-slate-200 dark:border-slate-700 border-b-4 border-b-slate-300 dark:border-b-slate-800 bg-white dark:bg-slate-800/80 text-slate-800 dark:text-slate-100 hover:border-emerald-400 hover:bg-emerald-50/20 active:translate-y-1 active:border-b-2 shadow-xs'
+                        ? 'border-emerald-400 bg-emerald-500/15 text-white shadow-[0_0_15px_rgba(0,229,117,0.25)] font-bold'
+                        : 'border-[#1A2E40] bg-[#101C27] text-slate-300 hover:border-slate-500 hover:bg-[#142433]'
                     }`}
                   >
-                    <span className="text-base">{opt}</span>
+                    <span className="text-sm font-semibold">{opt}</span>
                     <span
-                      className={`flex h-7 w-7 items-center justify-center rounded-xl border-2 text-xs font-black ${
+                      className={`flex h-7 w-7 items-center justify-center rounded-lg border text-xs font-mono font-black ${
                         isSelected
-                          ? 'border-emerald-500 bg-emerald-500 text-white shadow-xs'
-                          : 'border-slate-300 dark:border-slate-600 text-slate-400 bg-slate-50 dark:bg-slate-700'
+                          ? 'border-emerald-400 bg-emerald-400 text-slate-950'
+                          : 'border-[#1E374D] bg-[#0A131C] text-slate-400'
                       }`}
                     >
                       {String.fromCharCode(65 + idx)}
@@ -637,14 +582,18 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
             </div>
           )}
 
-          {/* TIPE 2: SUSUN KATA (WORD ORDER) CLAYMOPHISM TOKENS */}
+          {/* TIPE 2: WORD ORDER (GRAMMAR SURGERY) */}
           {currentQ.type === 'word_order' && (
-            <div className="space-y-4 pt-2">
-              {/* Slot Jawaban Terpilih */}
-              <div className="min-h-[75px] w-full rounded-2xl border-2 border-dashed border-emerald-300 dark:border-emerald-800 p-3.5 flex flex-wrap gap-2.5 items-center bg-emerald-50/30 dark:bg-emerald-950/20 shadow-inner">
+            <div className="card-cyber p-5 space-y-4">
+              <div className="text-xs text-slate-400">
+                Susun kata-kata di bawah ini menjadi kalimat yang tepat:
+              </div>
+
+              {/* Dropzone */}
+              <div className="min-h-[56px] p-3 rounded-xl bg-[#0A131C] border border-dashed border-[#1E374D] flex flex-wrap gap-2 items-center">
                 {wordOrderTokens.length === 0 ? (
-                  <span className="text-xs font-bold text-slate-400 pl-2">
-                    Ketuk kata-kata di bawah untuk menyusun kalimat...
+                  <span className="text-xs text-slate-500 italic pl-1">
+                    Ketuk kata di bawah untuk menyusun...
                   </span>
                 ) : (
                   wordOrderTokens.map((word, idx) => (
@@ -654,11 +603,10 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
                       disabled={!!feedback}
                       onClick={() => {
                         playBubblePop();
-                        // Kembalikan ke pool
                         setWordOrderTokens((prev) => prev.filter((_, i) => i !== idx));
                         setAvailableTokens((prev) => [...prev, word]);
                       }}
-                      className="rounded-2xl border-2 border-emerald-500 border-b-4 border-b-emerald-700 bg-emerald-500 hover:bg-emerald-600 px-4 py-2 text-sm font-black text-white shadow-md active:scale-95 transition"
+                      className="px-3 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-400/40 text-emerald-200 text-xs font-bold transition hover:bg-emerald-500/30 cursor-pointer"
                     >
                       {word}
                     </button>
@@ -666,8 +614,8 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
                 )}
               </div>
 
-              {/* Pool Token Tersedia */}
-              <div className="flex flex-wrap gap-2.5 pt-2">
+              {/* Pool Tokens */}
+              <div className="flex flex-wrap gap-2 pt-1">
                 {availableTokens.map((word, idx) => (
                   <button
                     key={idx}
@@ -678,7 +626,7 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
                       setWordOrderTokens((prev) => [...prev, word]);
                       setAvailableTokens((prev) => prev.filter((_, i) => i !== idx));
                     }}
-                    className="rounded-2xl border-2 border-slate-200 dark:border-slate-700 border-b-4 border-b-slate-300 dark:border-b-slate-800 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm font-black text-slate-800 dark:text-slate-100 shadow-sm hover:border-emerald-400 hover:bg-emerald-50/30 dark:hover:bg-slate-700 active:translate-y-1 active:border-b-2 transition"
+                    className="px-3.5 py-2 rounded-lg bg-[#142433] hover:bg-[#1A2F42] border border-[#1E374D] text-xs font-bold text-white transition cursor-pointer"
                   >
                     {word}
                   </button>
@@ -687,9 +635,9 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
             </div>
           )}
 
-          {/* TIPE 3: KETIK JAWABAN / ISIAN SINGKAT (FILL BLANK) */}
+          {/* TIPE 3: FILL IN THE BLANK */}
           {currentQ.type === 'fill_blank' && (
-            <div className="pt-2">
+            <div className="card-cyber p-5">
               <input
                 type="text"
                 disabled={!!feedback}
@@ -701,7 +649,7 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
                   }
                 }}
                 placeholder="Ketik jawabanmu di sini..."
-                className="w-full rounded-2xl border-2 border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-5 py-4 text-base font-black text-slate-900 dark:text-slate-100 focus:border-emerald-500 focus:bg-white dark:focus:bg-slate-900 focus:outline-none transition shadow-inner"
+                className="w-full rounded-xl border border-[#1A2E40] bg-[#0A131C] px-4 py-3.5 text-sm font-bold text-white focus:border-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-400 transition"
                 autoFocus
               />
             </div>
@@ -709,82 +657,69 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
         </div>
       </main>
 
-      {/* 3. BOTTOM FEEDBACK SHEET & ACTION BAR */}
+      {/* 3. BOTTOM MENTOR AVATAR & FEEDBACK ACTION BAR */}
       <footer
-        className={`border-t-2 p-4 sm:p-6 transition-all duration-300 backdrop-blur-md ${
+        className={`border-t border-[#1A2E40] p-4 sm:p-5 transition-all duration-300 backdrop-blur-md sticky bottom-0 z-30 ${
           feedback
             ? feedback.isCorrect
-              ? 'bg-emerald-100/90 dark:bg-emerald-950/90 border-emerald-400 dark:border-emerald-800 shadow-xl'
-              : 'bg-rose-100/90 dark:bg-rose-950/90 border-rose-400 dark:border-rose-800 shadow-xl'
-            : 'bg-white/90 dark:bg-slate-900/90 border-slate-200 dark:border-slate-800'
+              ? 'bg-[#0B2017]/95 border-emerald-500/50 shadow-[0_-4px_25px_rgba(0,229,117,0.2)]'
+              : 'bg-[#250E14]/95 border-rose-500/50 shadow-[0_-4px_25px_rgba(244,63,94,0.2)]'
+            : 'bg-[#080E15]/95'
         }`}
       >
         <div className="mx-auto flex max-w-4xl flex-col sm:flex-row items-center justify-between gap-4">
-          {/* Tampilan Feedback Jawaban */}
-          {feedback ? (
-            <div className="flex-1 space-y-1.5 text-left w-full">
-              <div className="flex items-center gap-2">
-                {feedback.isCorrect ? (
-                  <>
-                    <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-emerald-500 text-white shadow-sm">
-                      <CheckCircle2 className="h-6 w-6" />
-                    </div>
-                    <span className="font-black text-xl text-emerald-900 dark:text-emerald-100">
-                      {celebrationTitle} (+{feedback.xpEarned} XP)
-                    </span>
-                    {feedback.weakSkillBonusEarned > 0 && (
-                      <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-emerald-300 text-emerald-950 shadow-xs">
-                        +3 Bonus Materi Lemah
-                      </span>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-rose-500 text-white shadow-sm">
-                      <AlertCircle className="h-6 w-6" />
-                    </div>
-                    <span className="font-black text-xl text-rose-900 dark:text-rose-100">
-                      {feedback.errorType
-                        ? `Diagnosis: ${feedback.errorType.replace('_', ' ').toUpperCase()}`
-                        : 'Belum Tepat'}
-                    </span>
-                  </>
-                )}
-              </div>
+          {/* MENTOR AVATAR & DIALOGUE (Lily or Arthur) */}
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <div className="relative h-11 w-11 rounded-xl overflow-hidden shrink-0 border border-emerald-400/40 bg-[#080E15]">
+              <Image
+                src={companion.avatar}
+                alt={companion.name}
+                width={44}
+                height={44}
+                className="object-cover"
+              />
+            </div>
 
-              {/* Rincian Kunci Jawaban & Penjelasan */}
-              {!feedback.isCorrect && (
-                <div className="text-xs space-y-1.5 text-slate-800 dark:text-slate-200 pt-1 bg-white/70 dark:bg-slate-900/70 p-3 rounded-2xl border border-rose-200 dark:border-rose-900">
-                  <p>
-                    <span className="font-black">Kunci Jawaban: </span>
-                    <span className="font-extrabold text-emerald-700 dark:text-emerald-300">
+            <div className="flex-1 text-left">
+              {feedback ? (
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    {feedback.isCorrect ? (
+                      <>
+                        <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                        <span className="font-black text-sm text-emerald-300">
+                          {celebrationTitle} (+{feedback.xpEarned} XP)
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <AlertCircle className="h-4 w-4 text-rose-400 shrink-0" />
+                        <span className="font-black text-sm text-rose-300">
+                          {feedback.errorType
+                            ? `Diagnosis: ${feedback.errorType.replace('_', ' ').toUpperCase()}`
+                            : 'Belum Tepat'}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                  {!feedback.isCorrect && (
+                    <div className="text-[11px] text-slate-300 leading-tight">
+                      <span className="font-bold text-emerald-400">Jawaban benar: </span>
                       {feedback.correctAnswer}
-                    </span>
-                  </p>
-                  <p className="text-slate-700 dark:text-slate-300 leading-relaxed">
-                    <span className="font-black">Penjelasan: </span>
-                    {feedback.explanation}
-                  </p>
-                  {feedback.explanationSource === 'ai_live' && (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-sky-600 dark:text-sky-400">
-                      <Sparkles className="h-3 w-3" /> Penjelasan AI Gemini
-                    </span>
+                    </div>
                   )}
+                </div>
+              ) : (
+                <div>
+                  <div className="text-[11px] font-black text-emerald-400">{companion.name}</div>
+                  <div className="text-[10px] text-slate-300 leading-tight">{companionMessage}</div>
                 </div>
               )}
             </div>
-          ) : (
-            <div className="flex items-center gap-3 text-xs font-bold text-slate-400">
-              <span className="hidden sm:block">Pilih atau ketik jawabanmu, lalu tekan Periksa.</span>
-              <span className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[11px] text-slate-500 font-bold">
-                <kbd className="px-1.5 py-0.5 rounded bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 font-mono text-[10px]">1-4</kbd> Pilih
-                <kbd className="px-1.5 py-0.5 rounded bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 font-mono text-[10px]">Enter</kbd> Periksa
-              </span>
-            </div>
-          )}
+          </div>
 
-          {/* Tombol Periksa / Lanjut Tactile 3D */}
-          <div className="w-full sm:w-auto">
+          {/* ACTION BUTTON (PERIKSA / NEXT) */}
+          <div className="w-full sm:w-auto flex justify-end">
             {!feedback ? (
               <button
                 type="button"
@@ -795,7 +730,7 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
                   (currentQ?.type === 'fill_blank' && !textAnswer.trim()) ||
                   (currentQ?.type === 'word_order' && wordOrderTokens.length === 0)
                 }
-                className="w-full sm:w-auto rounded-2xl bg-emerald-500 hover:bg-emerald-600 border-b-4 border-emerald-700 active:translate-y-1 active:border-b-0 disabled:opacity-50 disabled:border-b-0 disabled:translate-y-0 px-9 py-4 text-sm font-black tracking-wide text-white shadow-lg transition"
+                className="btn-neon-pill px-8 py-3 text-xs w-full sm:w-auto disabled:opacity-40 cursor-pointer"
               >
                 {isEvaluating ? 'Memeriksa...' : 'Periksa'}
               </button>
@@ -803,24 +738,28 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
               <button
                 type="button"
                 onClick={handleNextQuestion}
-                className={`w-full sm:w-auto rounded-2xl px-9 py-4 text-sm font-black tracking-wide text-white shadow-lg transition active:translate-y-1 active:border-b-0 ${
+                className={`px-8 py-3 rounded-full text-xs font-black w-full sm:w-auto transition flex items-center justify-center gap-1.5 cursor-pointer ${
                   feedback.isCorrect
-                    ? 'bg-emerald-500 hover:bg-emerald-600 border-b-4 border-emerald-700'
-                    : 'bg-rose-500 hover:bg-rose-600 border-b-4 border-rose-700'
+                    ? 'btn-neon-pill'
+                    : 'bg-rose-500 hover:bg-rose-600 text-white shadow-[0_0_15px_rgba(244,63,94,0.3)]'
                 }`}
               >
-                Lanjut
+                <span>Lanjut</span>
+                <ChevronRight className="h-4 w-4" />
               </button>
             )}
           </div>
         </div>
       </footer>
 
-      {/* MODAL PERSONALISASI BELAJAR */}
+      {/* PERSONALISASI MODAL */}
       <PersonalizationModal
         isOpen={isPersonalizationOpen}
         onClose={() => setIsPersonalizationOpen(false)}
-        onPreferencesChanged={(p) => setSpeechRate(p.audioSpeed)}
+        onPreferencesChanged={(p) => {
+          setMascotChoice(p.mascot);
+          setSpeechRate(p.audioSpeed);
+        }}
       />
     </div>
   );
