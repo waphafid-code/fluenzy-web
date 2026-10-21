@@ -602,6 +602,8 @@ export function extractEnglishTarget(prompt: string, fillBlankAnswer?: string): 
 // SYNTHESIS EXECUTION (SPEAKING API)
 // ============================================================================
 
+export type VoiceEmotion = 'neutral' | 'cheerful' | 'empathetic' | 'pedagogical' | 'encouraging';
+
 export interface SpeechOptions {
   lang?: 'en-US' | 'id-ID' | 'auto';
   rate?: number; // Kecepatan suara: 0.6x (turtle) sampai 1.2x
@@ -609,6 +611,7 @@ export interface SpeechOptions {
   gender?: 'male' | 'female';
   preferredAccent?: EnglishAccentChoice;
   customVoiceName?: string;
+  emotion?: VoiceEmotion;
   onStart?: () => void;
   onEnd?: () => void;
 }
@@ -668,9 +671,59 @@ export function playNaturalNeuralAudio(
       const clean = text.replace(/[*#_~]/g, ' ').trim();
       if (!clean) return resolve(false);
 
-      const url = `/api/tts?text=${encodeURIComponent(clean)}&lang=${lang}`;
+      let prefs = null;
+      try {
+        prefs = getUserPreferences();
+      } catch {
+        // ignore
+      }
+
+      // 1. Resolve Accent (US American, UK British, AU Australian, ID Indonesian)
+      let resolvedLang = lang;
+      if (lang === 'en') {
+        const accent = options.preferredAccent || prefs?.englishAccent || 'us';
+        if (accent === 'uk') resolvedLang = 'en-GB' as 'en';
+        else if (accent === 'au') resolvedLang = 'en-AU' as 'en';
+        else resolvedLang = 'en';
+      }
+
+      const url = `/api/tts?text=${encodeURIComponent(clean)}&lang=${resolvedLang}`;
       const audio = new Audio(url);
       activeNeuralAudio = audio;
+
+      // 2. Emotional Prosody & Cadence Tuning (Zero VRAM, Zero Laptop CPU Load)
+      let effectiveRate = options.rate ?? (prefs?.audioSpeed ?? 1.0);
+      let preservesPitch = true;
+
+      switch (options.emotion) {
+        case 'cheerful':
+          // Lively celebratory tone with slightly elevated, enthusiastic inflection
+          effectiveRate = effectiveRate * 1.04;
+          preservesPitch = false;
+          break;
+        case 'empathetic':
+          // Warm, reassuring, unrushed pace for mistake reviews
+          effectiveRate = effectiveRate * 0.92;
+          preservesPitch = false;
+          break;
+        case 'pedagogical':
+          // Crisp, articulate teacher pacing for lesson prompts
+          effectiveRate = effectiveRate * 0.96;
+          preservesPitch = true;
+          break;
+        case 'encouraging':
+          effectiveRate = effectiveRate * 1.02;
+          preservesPitch = false;
+          break;
+        default:
+          preservesPitch = true;
+          break;
+      }
+
+      audio.playbackRate = Math.max(0.6, Math.min(1.4, effectiveRate));
+      if ('preservesPitch' in audio) {
+        (audio as unknown as { preservesPitch: boolean }).preservesPitch = preservesPitch;
+      }
 
       audio.onplay = () => {
         options.onStart?.();
@@ -813,6 +866,21 @@ export function stopSpeech() {
  * dan bagian bahasa Inggris diucapkan dengan suara en-US/UK/AU native (disesuaikan dengan preferensi user).
  */
 export function speakBilingualText(text: string, options: SpeechOptions = {}) {
+  // 1. Prioritaskan Cloud Neural TTS berkualitas tinggi (tanpa suara robot)
+  if (typeof window !== 'undefined' && typeof Audio !== 'undefined') {
+    const targetLang = detectLanguage(text) === 'id' ? 'id' : 'en';
+    playNaturalNeuralAudio(text, targetLang, options).then((success) => {
+      if (!success) {
+        _speakBilingualBrowserFallback(text, options);
+      }
+    });
+    return;
+  }
+
+  _speakBilingualBrowserFallback(text, options);
+}
+
+export function _speakBilingualBrowserFallback(text: string, options: SpeechOptions = {}) {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
     if (options.onStart) options.onStart();
     setTimeout(() => {
@@ -985,7 +1053,7 @@ function _speakBrowserFallback(text: string, options: SpeechOptions = {}) {
   }
 
   // Mode Auto: gunakan pembagian segmen bilingual adaptif
-  speakBilingualText(text, { ...options, gender: effectiveGender });
+  _speakBilingualBrowserFallback(text, { ...options, gender: effectiveGender });
 }
 
 /**

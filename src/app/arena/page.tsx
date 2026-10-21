@@ -81,9 +81,9 @@ export default function ArenaPage() {
     const textToSpeak =
       'Good morning team. During our pull request review, we must carefully check for code quality and maintainability.';
     if (isTurtleMode) {
-      speakTurtleMode(textToSpeak);
+      speakTurtleMode(textToSpeak, { emotion: 'pedagogical' });
     } else {
-      speakText(textToSpeak);
+      speakText(textToSpeak, { emotion: 'pedagogical' });
     }
     setTimeout(() => setIsPlayingAudio(false), 3500);
   }

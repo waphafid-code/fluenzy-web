@@ -160,6 +160,7 @@ export function PersonalizationModal({
       preferredAccent: prefs.englishAccent,
       customVoiceName: prefs.customEnglishVoice !== 'auto' ? prefs.customEnglishVoice : undefined,
       rate: prefs.audioSpeed,
+      emotion: 'cheerful',
       onEnd: () => setIsPlayingTest(null),
     });
   }
@@ -176,6 +177,7 @@ export function PersonalizationModal({
       customVoiceName:
         prefs.customIndonesianVoice !== 'auto' ? prefs.customIndonesianVoice : undefined,
       rate: prefs.audioSpeed,
+      emotion: 'cheerful',
       onEnd: () => setIsPlayingTest(null),
     });
   }
@@ -192,6 +194,7 @@ export function PersonalizationModal({
       preferredAccent: prefs.englishAccent,
       customVoiceName:
         prefs.customEnglishVoice !== 'auto' ? prefs.customEnglishVoice : undefined,
+      emotion: 'cheerful',
       onEnd: () => setIsPlayingTest(null),
     });
   }

@@ -15,7 +15,19 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const text = searchParams.get('text')?.trim();
-    const lang = searchParams.get('lang')?.toLowerCase().startsWith('id') ? 'id' : 'en';
+    const langParam = searchParams.get('lang')?.trim() || 'en';
+    let targetLang = 'en';
+    const lLower = langParam.toLowerCase();
+
+    if (lLower.startsWith('id') || lLower === 'indo') {
+      targetLang = 'id';
+    } else if (lLower.includes('gb') || lLower.includes('uk') || lLower.includes('british')) {
+      targetLang = 'en-GB';
+    } else if (lLower.includes('au') || lLower.includes('australia')) {
+      targetLang = 'en-AU';
+    } else {
+      targetLang = 'en';
+    }
 
     if (!text) {
       return NextResponse.json({ error: 'Missing text parameter' }, { status: 400 });
@@ -24,8 +36,8 @@ export async function GET(request: Request) {
     // Limit single-request text length for fast responsiveness
     const cleanText = text.replace(/[*#_~]/g, ' ').substring(0, 300).trim();
 
-    // High-fidelity natural neural voice stream (Google Neural TTS CDN)
-    const targetUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${lang}&client=tw-ob&q=${encodeURIComponent(cleanText)}`;
+    // High-fidelity natural neural voice stream with dialect support (US, UK, AU, ID)
+    const targetUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${targetLang}&client=tw-ob&q=${encodeURIComponent(cleanText)}`;
 
     const response = await fetch(targetUrl, {
       headers: {

@@ -76,6 +76,8 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
   // Companion & Audio Speed
   const [mascotChoice, setMascotChoice] = useState<MascotChoice>('lily');
   const [speechRate, setSpeechRate] = useState<number>(0.95);
+  const [preferredAccent, setPreferredAccent] = useState<string>('auto');
+  const [autoPronounce, setAutoPronounce] = useState<boolean>(false);
   const [isTurtleMode, setIsTurtleMode] = useState<boolean>(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState<boolean>(false);
   const [isPlayingTargetOnly, setIsPlayingTargetOnly] = useState<boolean>(false);
@@ -86,12 +88,16 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
     const prefs = getUserPreferences();
     setMascotChoice(prefs.mascot);
     setSpeechRate(prefs.audioSpeed);
+    setPreferredAccent(prefs.englishAccent);
+    setAutoPronounce(prefs.autoPronounce);
 
     const handlePrefChange = (e: Event) => {
       const customEvent = e as CustomEvent;
       if (customEvent.detail) {
         if (customEvent.detail.mascot) setMascotChoice(customEvent.detail.mascot);
         if (customEvent.detail.audioSpeed) setSpeechRate(customEvent.detail.audioSpeed);
+        if (customEvent.detail.englishAccent) setPreferredAccent(customEvent.detail.englishAccent);
+        if (typeof customEvent.detail.autoPronounce === 'boolean') setAutoPronounce(customEvent.detail.autoPronounce);
       }
     };
     window.addEventListener('fluenzy-preferences-updated', handlePrefChange);
@@ -191,27 +197,35 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
     );
   }, [currentIndex, currentQ, companion]);
 
-  // Audio Playback
-  // Audio Playback: Memutar soal dengan transisi bahasa yang tepat
+  // Audio Playback: Memutar soal dengan transisi bahasa dan artikulasi pedagogis yang jelas
   function handlePlayAudio() {
     if (!currentQ) return;
+    if (isPlayingAudio) {
+      stopSpeech();
+      setIsPlayingAudio(false);
+      return;
+    }
     playBubblePop();
     setIsPlayingAudio(true);
     setIsPlayingTargetOnly(false);
     const textToSpeak = currentQ.prompt;
     if (isTurtleMode) {
       speakTurtleMode(textToSpeak, {
+        preferredAccent: preferredAccent as any,
+        emotion: 'pedagogical',
         onEnd: () => setIsPlayingAudio(false),
       });
     } else {
-      speakBilingualText(textToSpeak, {
+      speakText(textToSpeak, {
         rate: speechRate,
+        preferredAccent: preferredAccent as any,
+        emotion: 'pedagogical',
         onEnd: () => setIsPlayingAudio(false),
       });
     }
   }
 
-  // Audio Playback: Hanya memutar target kalimat bahasa Inggris
+  // Audio Playback: Hanya memutar target kalimat bahasa Inggris dengan aksen native
   function handlePlayTargetOnly() {
     if (!currentQ) return;
     const target = extractEnglishTarget(currentQ.prompt);
@@ -224,12 +238,14 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
     setIsPlayingAudio(false);
     speakText(target, {
       lang: 'en-US',
+      preferredAccent: preferredAccent as any,
       rate: isTurtleMode ? 0.65 : speechRate,
+      emotion: 'pedagogical',
       onEnd: () => setIsPlayingTargetOnly(false),
     });
   }
 
-  // Audio Playback: Memutar penjelasan kaidah bilingual
+  // Audio Playback: Memutar penjelasan kaidah bilingual dengan nada empati membimbing
   function handlePlayExplanation(explanationText?: string) {
     if (!explanationText) return;
     if (isPlayingExplanation) {
@@ -239,8 +255,9 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
     }
     playBubblePop();
     setIsPlayingExplanation(true);
-    speakBilingualText(explanationText, {
+    speakText(explanationText, {
       rate: speechRate,
+      emotion: 'empathetic',
       onStart: () => setIsPlayingExplanation(true),
       onEnd: () => setIsPlayingExplanation(false),
     });
@@ -288,6 +305,19 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
         setCorrectCount((prev) => prev + 1);
         setTotalXpEarned((prev) => prev + (result.xpEarned || 10));
         setCompanionMessage(randomTitle);
+
+        if (autoPronounce) {
+          const target = extractEnglishTarget(currentQ.prompt, result.correctAnswer || finalUserAnswer);
+          if (target) {
+            setTimeout(() => {
+              speakText(target, {
+                lang: 'en-US',
+                preferredAccent: preferredAccent as any,
+                emotion: 'cheerful',
+              });
+            }, 350);
+          }
+        }
       } else {
         setCompanionMessage('Jangan khawatir! Cermati pembahasannya ya.');
         if (!result.canContinueSession) {

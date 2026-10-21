@@ -110,7 +110,7 @@ export function Navigation({ activeTab }: NavigationProps) {
       companion.id === 'arthur' || companion.id === 'boy'
         ? 'Kamu semakin dekat dengan tujuanmu. Tetap konsisten!'
         : 'Ayo lanjutkan petualangan belajarmu hari ini!';
-    speakText(greeting);
+    speakText(greeting, { emotion: 'encouraging' });
   }
 
   return (

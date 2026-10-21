@@ -292,7 +292,7 @@ export default function ProgressPage() {
               <Button
                 onClick={() => {
                   playBubblePop();
-                  speakText('Keep going! You are doing amazing.', { gender: 'female' });
+                  speakText('Keep going! You are doing amazing.', { gender: 'female', emotion: 'encouraging' });
                 }}
                 className="btn-lingua-primary px-4 py-2.5 text-xs font-black gap-2 shadow-lg"
               >

@@ -83,6 +83,7 @@ export function StandingMascot({
 
     speakText(randomPhrase, {
       rate: 1.0,
+      emotion: 'cheerful',
       onStart: () => setInternalTalking(true),
       onEnd: () => {
         setInternalTalking(false);
@@ -116,6 +117,7 @@ export function StandingMascot({
             playBubblePop();
             speakText(bubbleText, {
               rate: 0.95,
+              emotion: 'cheerful',
               onStart: () => setInternalTalking(true),
               onEnd: () => setInternalTalking(false),
             });

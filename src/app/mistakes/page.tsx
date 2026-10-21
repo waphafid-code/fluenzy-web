@@ -49,6 +49,7 @@ export default function MistakesReviewPage() {
     stopSpeech();
     setPlayingLogId(logId);
     speakBilingualText(explanation, {
+      emotion: 'empathetic',
       onEnd: () => setPlayingLogId(null),
     });
   }

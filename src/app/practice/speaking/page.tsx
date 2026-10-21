@@ -197,9 +197,9 @@ export default function SpeakingPracticePage() {
     const onEnd = () => setIsPlayingNative(false);
 
     if (turtle) {
-      speakTurtleMode(activeSentence, { onEnd });
+      speakTurtleMode(activeSentence, { emotion: 'pedagogical', onEnd });
     } else {
-      speakText(activeSentence, { rate: 0.95, onEnd });
+      speakText(activeSentence, { rate: 0.95, emotion: 'pedagogical', onEnd });
     }
   }
 
