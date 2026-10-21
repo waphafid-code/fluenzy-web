@@ -96,27 +96,27 @@ export default function HomePage() {
           {/* LEFT HERO TEXT (Cols 1-7) */}
           <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
             {/* Tagline Pill */}
-            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/40 bg-emerald-950/40 px-4 py-1.5 text-xs font-black text-emerald-300 shadow-[0_0_15px_rgba(0,229,117,0.15)]">
+            <div className="animate-fade-in-up inline-flex items-center gap-2 rounded-full border border-emerald-500/40 bg-emerald-950/40 px-4 py-1.5 text-xs font-black text-emerald-300 shadow-[0_0_15px_rgba(0,229,117,0.15)]">
               <Sparkles className="h-3.5 w-3.5 text-emerald-400" />
               <span>LEARN SMARTER, GROW FASTER</span>
             </div>
 
             {/* Main Headline */}
-            <h1 className="text-4xl sm:text-6xl font-black text-white tracking-tight leading-[1.1]">
+            <h1 className="animate-fade-in-up delay-100 text-4xl sm:text-6xl font-black text-white tracking-tight leading-[1.1]">
               Master a New{' '}
-              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400">
+              <span className="block text-gradient-animated">
                 Language,
               </span>
               Your Way.
             </h1>
 
             {/* Subtitle */}
-            <p className="text-base sm:text-lg font-medium text-slate-300 leading-relaxed max-w-xl mx-auto lg:mx-0">
+            <p className="animate-fade-in-up delay-200 text-base sm:text-lg font-medium text-slate-300 leading-relaxed max-w-xl mx-auto lg:mx-0">
               Learn English through personalized lessons, interactive exercises, and a learning path that adapts to your progress.
             </p>
 
             {/* CTA Buttons */}
-            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-2">
+            <div className="animate-fade-in-up delay-300 flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-2">
               <Link
                 href="/roadmap"
                 onClick={() => playBubblePop()}
@@ -134,7 +134,7 @@ export default function HomePage() {
             </div>
 
             {/* 3 Value Propositions */}
-            <div className="grid grid-cols-3 gap-3 pt-6 border-t border-[#1A2E40]/80 max-w-xl mx-auto lg:mx-0">
+            <div className="animate-fade-in-up delay-400 grid grid-cols-3 gap-3 pt-6 border-t border-[#1A2E40]/80 max-w-xl mx-auto lg:mx-0">
               <div className="flex items-center gap-2.5 text-left">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400">
                   <Brain className="h-4 w-4" />
@@ -177,7 +177,7 @@ export default function HomePage() {
               {/* Center Mascot Image */}
               <div
                 onClick={() => handlePlayGreeting("Hey, I'm Lumi! Ready for today's lesson?")}
-                className="relative w-[340px] h-[340px] cursor-pointer group transition-transform duration-300 hover:scale-105"
+                className="animate-pop-in delay-300 relative w-[340px] h-[340px] cursor-pointer group transition-transform duration-300 hover:scale-105"
                 title="Klik untuk menyapa Lumi!"
               >
                 <Image
@@ -193,7 +193,7 @@ export default function HomePage() {
               <button
                 type="button"
                 onClick={() => handlePlayGreeting('Hello!')}
-                className="absolute top-8 left-4 px-3.5 py-1.5 rounded-full bg-[#142D3D] border border-cyan-400/50 text-cyan-300 text-xs font-black shadow-[0_0_15px_rgba(0,210,255,0.3)] hover:scale-110 transition cursor-pointer"
+                className="animate-bubble-1 absolute top-8 left-4 px-3.5 py-1.5 rounded-full bg-[#142D3D] border border-cyan-400/50 text-cyan-300 text-xs font-black shadow-[0_0_15px_rgba(0,210,255,0.3)] hover:scale-110 transition cursor-pointer"
               >
                 Hello!
               </button>
@@ -202,7 +202,7 @@ export default function HomePage() {
               <button
                 type="button"
                 onClick={() => handlePlayGreeting('Ni hao!')}
-                className="absolute top-2 right-12 px-3 py-1.5 rounded-full bg-[#152338] border border-blue-400/50 text-blue-300 text-xs font-black shadow-[0_0_15px_rgba(59,130,246,0.3)] hover:scale-110 transition cursor-pointer"
+                className="animate-bubble-2 absolute top-2 right-12 px-3 py-1.5 rounded-full bg-[#152338] border border-blue-400/50 text-blue-300 text-xs font-black shadow-[0_0_15px_rgba(59,130,246,0.3)] hover:scale-110 transition cursor-pointer"
               >
                 你好
               </button>
@@ -211,7 +211,7 @@ export default function HomePage() {
               <button
                 type="button"
                 onClick={() => handlePlayGreeting('Hola!')}
-                className="absolute bottom-16 left-6 px-3.5 py-1.5 rounded-full bg-[#18233C] border border-indigo-400/50 text-indigo-300 text-xs font-black shadow-[0_0_15px_rgba(99,102,241,0.3)] hover:scale-110 transition cursor-pointer"
+                className="animate-bubble-3 absolute bottom-16 left-6 px-3.5 py-1.5 rounded-full bg-[#18233C] border border-indigo-400/50 text-indigo-300 text-xs font-black shadow-[0_0_15px_rgba(99,102,241,0.3)] hover:scale-110 transition cursor-pointer"
               >
                 Hola!
               </button>
@@ -220,7 +220,7 @@ export default function HomePage() {
               <button
                 type="button"
                 onClick={() => handlePlayGreeting('Bonjour!')}
-                className="absolute bottom-10 right-4 px-3.5 py-1.5 rounded-full bg-[#112D22] border border-emerald-400/50 text-emerald-300 text-xs font-black shadow-[0_0_15px_rgba(0,229,117,0.3)] hover:scale-110 transition cursor-pointer"
+                className="animate-bubble-4 absolute bottom-10 right-4 px-3.5 py-1.5 rounded-full bg-[#112D22] border border-emerald-400/50 text-emerald-300 text-xs font-black shadow-[0_0_15px_rgba(0,229,117,0.3)] hover:scale-110 transition cursor-pointer"
               >
                 Bonjour!
               </button>

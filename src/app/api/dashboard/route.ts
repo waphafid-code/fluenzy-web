@@ -10,6 +10,8 @@ import {
   calculateStreakCalendar,
 } from '@/lib/core/insights';
 
+
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -45,7 +47,29 @@ export async function GET(request: Request) {
     }
 
     if (!user) {
-      return NextResponse.json({ error: 'Pengguna tidak ditemukan.' }, { status: 404 });
+      user = await prisma.user.create({
+        data: {
+          email: userEmail,
+          name: 'Pelajar Fluenzy',
+          passwordHash: 'guest_managed',
+          stats: {
+            create: {
+              totalXp: 100,
+              hearts: 5,
+              currentStreak: 1,
+            },
+          },
+        },
+        include: {
+          stats: true,
+          skillMasteries: {
+            include: { skill: true },
+          },
+          dailyActivities: {
+            orderBy: { date: 'asc' },
+          },
+        },
+      });
     }
 
     // 1.5 Cek dan sinkronkan data live dari Supabase Mobile jika ada

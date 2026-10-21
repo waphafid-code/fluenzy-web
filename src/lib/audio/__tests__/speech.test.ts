@@ -6,6 +6,9 @@ import {
   getEnglishVoice,
   getIndonesianVoice,
   getAvailableVoicesGrouped,
+  synthesizeVibeVoiceAudio,
+  stopVibeVoiceAudio,
+  detectVoiceGender,
 } from '../speech';
 
 describe('Speech Synthesis Bilingual Routing Engine', () => {
@@ -153,6 +156,20 @@ describe('Speech Synthesis Bilingual Routing Engine', () => {
       const idVoice = getIndonesianVoice('Microsoft Ardi Online (Natural) - Indonesian (Indonesia)');
       expect(idVoice?.name).toContain('Ardi');
     });
+
+    it('selects male voice for male mascot and female voice for female mascot', () => {
+      const maleVoice = mockVoices.find((v) => v.name.includes('Ardi'))!;
+      const femaleVoice = mockVoices.find((v) => v.name.includes('Gadis'))!;
+      expect(detectVoiceGender(maleVoice)).toBe('male');
+      expect(detectVoiceGender(femaleVoice)).toBe('female');
+
+      // Test Indonesian voice with male vs female target
+      const idMale = getIndonesianVoice(undefined, 'male');
+      expect(idMale?.name).toContain('Ardi');
+
+      const idFemale = getIndonesianVoice(undefined, 'female');
+      expect(idFemale?.name).toContain('Gadis');
+    });
   });
 
   describe('extractEnglishTarget()', () => {
@@ -172,6 +189,17 @@ describe('Speech Synthesis Bilingual Routing Engine', () => {
       const prompt = 'The earth revolves around the sun.';
       const target = extractEnglishTarget(prompt);
       expect(target).toBe('The earth revolves around the sun.');
+    });
+  });
+
+  describe('VibeVoice Integration', () => {
+    it('synthesizeVibeVoiceAudio returns false when VibeVoice is not enabled', async () => {
+      const res = await synthesizeVibeVoiceAudio('Hello test');
+      expect(res).toBe(false);
+    });
+
+    it('stopVibeVoiceAudio can be called safely without throwing', () => {
+      expect(() => stopVibeVoiceAudio()).not.toThrow();
     });
   });
 });

@@ -192,7 +192,7 @@ export function StandingMascot({
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
             }`}
           >
-            👦 Leo
+            Leo
           </button>
           <button
             type="button"
@@ -209,7 +209,7 @@ export function StandingMascot({
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
             }`}
           >
-            👧 Maya
+            Maya
           </button>
         </div>
       )}

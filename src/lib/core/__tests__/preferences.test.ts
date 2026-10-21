@@ -4,6 +4,7 @@ import {
   getUserPreferences,
   saveUserPreferences,
   calculateDailyGoalProgress,
+  getEffectiveVoiceGender,
 } from '../preferences';
 
 describe('User Preferences & Personalization Engine', () => {
@@ -54,5 +55,23 @@ describe('User Preferences & Personalization Engine', () => {
     expect(p2.percentage).toBe(100);
     expect(p2.isAchieved).toBe(true);
     expect(p2.remainingXp).toBe(0);
+  });
+
+  it('menentukan gender suara secara otomatis sesuai maskot aktif', () => {
+    // Default mascot 'boy' (Arthur) -> male
+    expect(getUserPreferences().mascot).toBe('boy');
+    expect(getUserPreferences().voiceGender).toBe('auto');
+
+    // Lily / girl -> female
+    saveUserPreferences({ mascot: 'lily', voiceGender: 'auto' });
+    expect(getEffectiveVoiceGender()).toBe('female');
+
+    // Arthur / boy -> male
+    saveUserPreferences({ mascot: 'arthur', voiceGender: 'auto' });
+    expect(getEffectiveVoiceGender()).toBe('male');
+
+    // Manual override to female despite male mascot
+    saveUserPreferences({ mascot: 'arthur', voiceGender: 'female' });
+    expect(getEffectiveVoiceGender()).toBe('female');
   });
 });

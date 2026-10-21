@@ -1,16 +1,21 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
 
+
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const userEmail = searchParams.get('email') || 'budi@fluenzy.id';
 
-    const user = await prisma.user.findFirst({
+    let user = await prisma.user.findFirst({
       where: { email: userEmail },
     });
     if (!user) {
-      return NextResponse.json({ error: 'Pengguna tidak ditemukan' }, { status: 404 });
+      user = await prisma.user.findFirst();
+    }
+    if (!user) {
+      return NextResponse.json({ totalMistakes: 0, skills: [] });
     }
 
     // Ambil seluruh log jawaban salah

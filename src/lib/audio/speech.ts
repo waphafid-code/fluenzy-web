@@ -140,12 +140,51 @@ export function getAvailableVoicesGrouped(): GroupedVoices {
 }
 
 /**
- * Memilih suara bahasa Inggris terbaik berdasarkan preferensi aksen (US, UK, AU)
- * atau nama suara kustom pengguna.
+ * Mendeteksi gender suara (pria / wanita) berdasarkan nama suara dan metadata persona.
+ */
+export function detectVoiceGender(v: SpeechSynthesisVoice): 'male' | 'female' | 'unknown' {
+  const name = v.name.toLowerCase();
+
+  // Keyword langsung
+  if (name.includes('female') || name.includes('perempuan') || name.includes('wanita') || name.includes('woman') || name.includes('girl')) {
+    return 'female';
+  }
+  if (name.includes('male') || name.includes('laki') || name.includes('pria') || name.includes('man') || name.includes('boy')) {
+    return 'male';
+  }
+
+  // Persona wanita umum pada OS & browser
+  const femalePersonas = [
+    'jenny', 'aria', 'michelle', 'sonia', 'natasha', 'libby', 'neerja', 'ava',
+    'samantha', 'victoria', 'karen', 'fiona', 'moira', 'tessa', 'zira', 'lily',
+    'gadis', 'damayanti', 'siti', 'ayu', 'linda', 'sarah', 'emily', 'clara',
+    'anna', 'susan', 'cathy', 'alice', 'zoe', 'helena', 'catherine'
+  ];
+  for (const p of femalePersonas) {
+    if (name.includes(p)) return 'female';
+  }
+
+  // Persona pria umum pada OS & browser
+  const malePersonas = [
+    'guy', 'christopher', 'ryan', 'andrew', 'brian', 'oliver', 'steffan', 'eric',
+    'daniel', 'david', 'mark', 'george', 'james', 'tom', 'alex', 'fred', 'arthur',
+    'ardi', 'andika', 'budi', 'reza', 'michael', 'john', 'william', 'richard', 'davis'
+  ];
+  for (const p of malePersonas) {
+    if (name.includes(p)) return 'male';
+  }
+
+  return 'unknown';
+}
+
+/**
+ * Memilih suara bahasa Inggris terbaik berdasarkan preferensi aksen (US, UK, AU),
+ * nama suara kustom pengguna, dan gender maskot (pria/wanita).
  */
 export function getEnglishVoice(
   preferredAccent?: EnglishAccentChoice,
-  customVoiceName?: string
+  customVoiceName?: string,
+  targetGender?: 'male' | 'female'
 ): SpeechSynthesisVoice | null {
   const synth = getSpeechSynth();
   if (!synth) return null;
@@ -163,6 +202,7 @@ export function getEnglishVoice(
 
   const targetVoiceName = customVoiceName || prefs?.customEnglishVoice;
   const accent = preferredAccent || prefs?.englishAccent || 'auto';
+  const effectiveGender = targetGender || (prefs ? (prefs.voiceGender === 'auto' ? (prefs.mascot === 'girl' || prefs.mascot === 'lily' ? 'female' : 'male') : prefs.voiceGender) : 'male');
 
   // 1. Jika pengguna memilih nama suara spesifik
   if (targetVoiceName && targetVoiceName !== 'auto') {
@@ -199,29 +239,98 @@ export function getEnglishVoice(
     if (usPool.length > 0) candidatePool = usPool;
   }
 
-  // 3. Prioritaskan suara natural berkualitas tinggi
-  const preferredVoice =
-    candidatePool.find(
-      (v) =>
-        v.name.includes('Natural') ||
-        v.name.includes('Google') ||
-        v.name.includes('Jenny') ||
-        v.name.includes('Guy') ||
-        v.name.includes('Aria') ||
-        v.name.includes('Sonia') ||
-        v.name.includes('Ryan') ||
-        v.name.includes('Natasha') ||
-        v.name.includes('Samantha') ||
-        v.name.includes('Daniel')
-    ) || candidatePool[0];
+  // 3. Prioritaskan suara natural neural berkualitas tinggi dan sesuaikan dengan gender maskot
+  const sorted = [...candidatePool].sort(
+    (a, b) => rankEnglishVoice(b, effectiveGender) - rankEnglishVoice(a, effectiveGender)
+  );
+  return sorted[0] || englishVoices[0];
+}
 
-  return preferredVoice || englishVoices[0];
+export function rankEnglishVoice(v: SpeechSynthesisVoice, targetGender?: 'male' | 'female'): number {
+  let score = 0;
+  const name = v.name.toLowerCase();
+  const voiceGender = detectVoiceGender(v);
+
+  // Filter Gender: Utamakan suara yang cocok dengan maskot (cowok -> male, cewek -> female)
+  if (targetGender === 'male') {
+    if (voiceGender === 'male') score += 180;
+    else if (voiceGender === 'female') score -= 250; // Penalti kuat agar maskot cowok tidak bersuara cewek
+  } else if (targetGender === 'female') {
+    if (voiceGender === 'female') score += 180;
+    else if (voiceGender === 'male') score -= 250; // Penalti kuat agar maskot cewek tidak bersuara cowok
+  }
+
+  // Tier 1: Modern Neural Online Natural voices (Edge, Azure, Chrome)
+  if (name.includes('online (natural)')) score += 150;
+  else if (name.includes('natural')) score += 120;
+  else if (name.includes('neural')) score += 110;
+
+  // Tier 2: Premium Browser & OS Neural engines
+  if (name.includes('google')) score += 80;
+  if (name.includes('enhanced') || name.includes('premium')) score += 75;
+
+  // Tier 3: Known high-fidelity personas
+  if (
+    name.includes('jenny') ||
+    name.includes('guy') ||
+    name.includes('aria') ||
+    name.includes('sonia') ||
+    name.includes('ryan') ||
+    name.includes('samantha') ||
+    name.includes('daniel') ||
+    name.includes('ava') ||
+    name.includes('oliver') ||
+    name.includes('christopher')
+  ) {
+    score += 50;
+  }
+
+  // Heavy penalty untuk suara sintesis robotik era SAPI5 / Desktop lama
+  if (name.includes('desktop')) score -= 200;
+  if (name.includes('david desktop') || name.includes('zira desktop') || name.includes('mark desktop') || name.includes('george desktop')) {
+    score -= 250;
+  }
+  if (name.includes('espeak') || name.includes('sapi')) score -= 300;
+
+  return score;
+}
+
+export function rankIndonesianVoice(v: SpeechSynthesisVoice, targetGender?: 'male' | 'female'): number {
+  let score = 0;
+  const name = v.name.toLowerCase();
+  const voiceGender = detectVoiceGender(v);
+
+  // Filter Gender bahasa Indonesia
+  if (targetGender === 'male') {
+    if (voiceGender === 'male') score += 180;
+    else if (voiceGender === 'female') score -= 250;
+  } else if (targetGender === 'female') {
+    if (voiceGender === 'female') score += 180;
+    else if (voiceGender === 'male') score -= 250;
+  }
+
+  if (name.includes('online (natural)')) score += 150;
+  else if (name.includes('natural')) score += 120;
+  else if (name.includes('neural')) score += 110;
+
+  if (name.includes('google')) score += 80;
+  if (name.includes('gadis') || name.includes('ardi')) score += 70;
+  if (name.includes('damayanti') || name.includes('andika')) score += 50;
+
+  if (name.includes('desktop')) score -= 200;
+  if (name.includes('espeak') || name.includes('sapi')) score -= 300;
+
+  return score;
 }
 
 /**
- * Memilih suara bahasa Indonesia terbaik berdasarkan nama suara kustom pengguna atau kualitas natural.
+ * Memilih suara bahasa Indonesia terbaik berdasarkan nama suara kustom pengguna atau kualitas natural,
+ * serta dicocokkan dengan gender maskot aktif.
  */
-export function getIndonesianVoice(customVoiceName?: string): SpeechSynthesisVoice | null {
+export function getIndonesianVoice(
+  customVoiceName?: string,
+  targetGender?: 'male' | 'female'
+): SpeechSynthesisVoice | null {
   const synth = getSpeechSynth();
   if (!synth) return null;
 
@@ -242,6 +351,7 @@ export function getIndonesianVoice(customVoiceName?: string): SpeechSynthesisVoi
   }
 
   const targetVoiceName = customVoiceName || prefs?.customIndonesianVoice;
+  const effectiveGender = targetGender || (prefs ? (prefs.voiceGender === 'auto' ? (prefs.mascot === 'girl' || prefs.mascot === 'lily' ? 'female' : 'male') : prefs.voiceGender) : 'male');
 
   // 1. Jika pengguna memilih nama suara spesifik
   if (targetVoiceName && targetVoiceName !== 'auto') {
@@ -249,19 +359,11 @@ export function getIndonesianVoice(customVoiceName?: string): SpeechSynthesisVoi
     if (matched) return matched;
   }
 
-  // 2. Prioritas suara natural Indonesia
-  const preferredVoice =
-    indonesianVoices.find(
-      (v) =>
-        v.name.includes('Gadis') ||
-        v.name.includes('Ardi') ||
-        v.name.includes('Natural') ||
-        v.name.includes('Google') ||
-        v.name.includes('Damayanti') ||
-        v.name.includes('Andika')
-    ) || indonesianVoices[0];
-
-  return preferredVoice || indonesianVoices[0];
+  // 2. Prioritas suara natural Indonesia berbasis neural ranking & gender
+  const sorted = [...indonesianVoices].sort(
+    (a, b) => rankIndonesianVoice(b, effectiveGender) - rankIndonesianVoice(a, effectiveGender)
+  );
+  return sorted[0] || indonesianVoices[0];
 }
 
 // Inisialisasi daftar voice saat siap di browser
@@ -504,16 +606,198 @@ export interface SpeechOptions {
   lang?: 'en-US' | 'id-ID' | 'auto';
   rate?: number; // Kecepatan suara: 0.6x (turtle) sampai 1.2x
   pitch?: number;
+  gender?: 'male' | 'female';
   preferredAccent?: EnglishAccentChoice;
   customVoiceName?: string;
   onStart?: () => void;
   onEnd?: () => void;
 }
 
+let activeVibeVoiceAudio: HTMLAudioElement | null = null;
+
+export function stopVibeVoiceAudio() {
+  if (activeVibeVoiceAudio) {
+    try {
+      activeVibeVoiceAudio.pause();
+      activeVibeVoiceAudio.currentTime = 0;
+      activeVibeVoiceAudio = null;
+    } catch {
+      // ignore
+    }
+  }
+}
+
+let activeNeuralAudio: HTMLAudioElement | null = null;
+
+export function stopNeuralAudio() {
+  if (activeNeuralAudio) {
+    try {
+      activeNeuralAudio.pause();
+      activeNeuralAudio.currentTime = 0;
+      activeNeuralAudio = null;
+    } catch {
+      // ignore
+    }
+  }
+}
+
+/**
+ * Memainkan audio neural berkualitas tinggi melalui endpoint /api/tts.
+ * Menghasilkan suara manusia asli yang natural dan menghilangkan intonasi robotik.
+ */
+export function playNaturalNeuralAudio(
+  text: string,
+  lang: 'en' | 'id',
+  options: SpeechOptions = {}
+): Promise<boolean> {
+  return new Promise((resolve) => {
+    try {
+      if (typeof window === 'undefined' || typeof Audio === 'undefined') {
+        return resolve(false);
+      }
+      stopVibeVoiceAudio();
+      stopNeuralAudio();
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        try {
+          window.speechSynthesis.cancel();
+        } catch {
+          // ignore
+        }
+      }
+
+      const clean = text.replace(/[*#_~]/g, ' ').trim();
+      if (!clean) return resolve(false);
+
+      const url = `/api/tts?text=${encodeURIComponent(clean)}&lang=${lang}`;
+      const audio = new Audio(url);
+      activeNeuralAudio = audio;
+
+      audio.onplay = () => {
+        options.onStart?.();
+      };
+
+      audio.onended = () => {
+        if (activeNeuralAudio === audio) activeNeuralAudio = null;
+        options.onEnd?.();
+        resolve(true);
+      };
+
+      audio.onerror = () => {
+        if (activeNeuralAudio === audio) activeNeuralAudio = null;
+        resolve(false);
+      };
+
+      audio.play().catch(() => {
+        if (activeNeuralAudio === audio) activeNeuralAudio = null;
+        resolve(false);
+      });
+    } catch {
+      resolve(false);
+    }
+  });
+}
+
+/**
+ * Melakukan sintesis suara melalui Microsoft VibeVoice API endpoint.
+ * Mendukung OpenAI-compatible /v1/audio/speech atau Hugging Face Inference Endpoint format.
+ */
+export async function synthesizeVibeVoiceAudio(
+  text: string,
+  options: SpeechOptions = {}
+): Promise<boolean> {
+  let prefs = null;
+  try {
+    prefs = getUserPreferences();
+  } catch {
+    return false;
+  }
+
+  if (!prefs || prefs.voiceEngine !== 'vibevoice' || !prefs.vibeVoiceEndpoint?.trim()) {
+    return false;
+  }
+
+  try {
+    options.onStart?.();
+
+    let url = prefs.vibeVoiceEndpoint.trim();
+    if (!url.includes('/audio/speech') && !url.includes('/models/')) {
+      url = `${url.replace(/\/+$/, '')}/v1/audio/speech`;
+    }
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (prefs.vibeVoiceApiKey?.trim()) {
+      headers['Authorization'] = `Bearer ${prefs.vibeVoiceApiKey.trim()}`;
+    }
+
+    const payload = {
+      model: 'microsoft/VibeVoice-1.5B',
+      input: text,
+      voice:
+        options.customVoiceName && options.customVoiceName !== 'auto'
+          ? options.customVoiceName
+          : options.preferredAccent === 'uk'
+          ? 'british-coach'
+          : options.preferredAccent === 'au'
+          ? 'australian-coach'
+          : 'american-tutor',
+      response_format: 'mp3',
+      speed: options.rate ?? 1.0,
+    };
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      console.warn(`VibeVoice API returned status ${res.status}: falling back to browser TTS.`);
+      return false;
+    }
+
+    const blob = await res.blob();
+    if (typeof window === 'undefined') return true;
+    const audioUrl = URL.createObjectURL(blob);
+
+    stopVibeVoiceAudio();
+    if (typeof Audio === 'undefined') return true;
+
+    const audio = new Audio(audioUrl);
+    activeVibeVoiceAudio = audio;
+
+    return new Promise((resolve) => {
+      audio.onended = () => {
+        URL.revokeObjectURL(audioUrl);
+        activeVibeVoiceAudio = null;
+        options.onEnd?.();
+        resolve(true);
+      };
+      audio.onerror = () => {
+        URL.revokeObjectURL(audioUrl);
+        activeVibeVoiceAudio = null;
+        options.onEnd?.();
+        resolve(false);
+      };
+      audio.play().catch(() => {
+        URL.revokeObjectURL(audioUrl);
+        activeVibeVoiceAudio = null;
+        resolve(false);
+      });
+    });
+  } catch (err) {
+    console.warn('VibeVoice API error:', err);
+    return false;
+  }
+}
+
 /**
  * Hentikan pemutaran audio yang sedang aktif.
  */
 export function stopSpeech() {
+  stopVibeVoiceAudio();
+  stopNeuralAudio();
   if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
     try {
       window.speechSynthesis.cancel();
@@ -545,6 +829,24 @@ export function speakBilingualText(text: string, options: SpeechOptions = {}) {
     return;
   }
 
+  let prefs = null;
+  try {
+    prefs = getUserPreferences();
+  } catch {
+    // ignore
+  }
+
+  const effectiveGender: 'male' | 'female' =
+    options.gender ||
+    (prefs
+      ? prefs.voiceGender === 'auto'
+        ? prefs.mascot === 'girl' || prefs.mascot === 'lily'
+          ? 'female'
+          : 'male'
+        : prefs.voiceGender
+      : 'male');
+
+  const naturalPitch = options.pitch ?? (effectiveGender === 'male' ? 0.94 : 1.02);
   let started = false;
 
   segments.forEach((seg, index) => {
@@ -554,13 +856,13 @@ export function speakBilingualText(text: string, options: SpeechOptions = {}) {
     const utterance = new SpeechSynthesisUtterance(seg.text);
     utterance.lang = seg.lang;
     utterance.rate = options.rate ?? (seg.lang === 'id-ID' ? 1.0 : 0.95);
-    utterance.pitch = options.pitch ?? 1.0;
+    utterance.pitch = naturalPitch;
 
     if (seg.lang === 'id-ID') {
-      const idVoice = getIndonesianVoice(options.customVoiceName);
+      const idVoice = getIndonesianVoice(options.customVoiceName, effectiveGender);
       if (idVoice) utterance.voice = idVoice;
     } else {
-      const enVoice = getEnglishVoice(options.preferredAccent, options.customVoiceName);
+      const enVoice = getEnglishVoice(options.preferredAccent, options.customVoiceName, effectiveGender);
       if (enVoice) utterance.voice = enVoice;
     }
 
@@ -589,9 +891,45 @@ export function speakBilingualText(text: string, options: SpeechOptions = {}) {
 /**
  * Fungsi utama pengucap suara (TTS):
  * Secara otomatis mendeteksi bahasa teks dan memilih suara asli (native)
- * bahasa Indonesia atau aksen bahasa Inggris pilihan (US, UK, AU) tanpa memaksakan aksen asing.
+ * bahasa Indonesia atau aksen bahasa Inggris pilihan (US, UK, AU) yang sesuai dengan gender maskot.
  */
 export function speakText(text: string, options: SpeechOptions = {}) {
+  let prefs = null;
+  try {
+    prefs = getUserPreferences();
+  } catch {
+    // ignore
+  }
+
+  // 1. Jika mode VibeVoice aktif dan endpoint diisi, panggil VibeVoice / Hugging Face endpoint
+  if (prefs?.voiceEngine === 'vibevoice' && prefs?.vibeVoiceEndpoint?.trim()) {
+    synthesizeVibeVoiceAudio(text, options).then((success) => {
+      if (!success) {
+        _speakBrowserFallback(text, options);
+      }
+    });
+    return;
+  }
+
+  // 2. Gunakan Cloud Neural Natural TTS (/api/tts) untuk suara manusia alami (bukan robot)
+  const targetLang =
+    options.lang === 'id-ID'
+      ? 'id'
+      : options.lang === 'en-US'
+        ? 'en'
+        : detectLanguage(text) === 'id'
+          ? 'id'
+          : 'en';
+
+  playNaturalNeuralAudio(text, targetLang, options).then((success) => {
+    if (!success) {
+      // 3. Fallback ke sintesis browser lokal jika offline / network gagal
+      _speakBrowserFallback(text, options);
+    }
+  });
+}
+
+function _speakBrowserFallback(text: string, options: SpeechOptions = {}) {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
     if (options.onStart) options.onStart();
     setTimeout(() => {
@@ -599,6 +937,25 @@ export function speakText(text: string, options: SpeechOptions = {}) {
     }, 1000);
     return;
   }
+
+  let prefs = null;
+  try {
+    prefs = getUserPreferences();
+  } catch {
+    // ignore
+  }
+
+  const effectiveGender: 'male' | 'female' =
+    options.gender ||
+    (prefs
+      ? prefs.voiceGender === 'auto'
+        ? prefs.mascot === 'girl' || prefs.mascot === 'lily'
+          ? 'female'
+          : 'male'
+        : prefs.voiceGender
+      : 'male');
+
+  const naturalPitch = options.pitch ?? (effectiveGender === 'male' ? 0.94 : 1.02);
 
   // Jika bahasa ditentukan secara eksplisit
   if (options.lang === 'en-US' || options.lang === 'id-ID') {
@@ -609,12 +966,12 @@ export function speakText(text: string, options: SpeechOptions = {}) {
     const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.lang = options.lang;
     utterance.rate = options.rate ?? (options.lang === 'id-ID' ? 1.0 : 0.95);
-    utterance.pitch = options.pitch ?? 1.0;
+    utterance.pitch = naturalPitch;
 
     const voice =
       options.lang === 'id-ID'
-        ? getIndonesianVoice(options.customVoiceName)
-        : getEnglishVoice(options.preferredAccent, options.customVoiceName);
+        ? getIndonesianVoice(options.customVoiceName, effectiveGender)
+        : getEnglishVoice(options.preferredAccent, options.customVoiceName, effectiveGender);
     if (voice) utterance.voice = voice;
 
     if (options.onStart) utterance.onstart = () => options.onStart?.();
@@ -628,7 +985,7 @@ export function speakText(text: string, options: SpeechOptions = {}) {
   }
 
   // Mode Auto: gunakan pembagian segmen bilingual adaptif
-  speakBilingualText(text, options);
+  speakBilingualText(text, { ...options, gender: effectiveGender });
 }
 
 /**
@@ -649,7 +1006,21 @@ export function speakWord(
  */
 export function speakLetter(char: string, onStart?: () => void, onEnd?: () => void) {
   playBubblePop();
-  speakText(char, { lang: 'en-US', rate: 0.8, pitch: 1.1, onStart, onEnd });
+  let prefs = null;
+  try {
+    prefs = getUserPreferences();
+  } catch {
+    // ignore
+  }
+  const gender: 'male' | 'female' = prefs
+    ? prefs.voiceGender === 'auto'
+      ? prefs.mascot === 'girl' || prefs.mascot === 'lily'
+        ? 'female'
+        : 'male'
+      : prefs.voiceGender
+    : 'male';
+  const pitch = gender === 'male' ? 0.95 : 1.08;
+  speakText(char, { lang: 'en-US', rate: 0.8, pitch, gender, onStart, onEnd });
 }
 
 /**

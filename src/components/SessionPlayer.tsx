@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { LottiePlayer } from '@/components/ui/LottiePlayer';
 import {
   Heart,
   X,
@@ -30,6 +31,7 @@ import { getUserPreferences, getCompanionInfo, MascotChoice } from '@/lib/core/p
 import {
   speakText,
   speakWord,
+  speakLetter,
   speakTurtleMode,
   speakBilingualText,
   extractEnglishTarget,
@@ -57,12 +59,12 @@ interface SessionPlayerProps {
 }
 
 const CELEBRATION_TITLES = [
-  'Luar Biasa! 🔥',
-  'Kerja Bagus! 🌟',
-  'Tepat Sekali! 🎯',
-  'Sempurna! ✨',
-  'Mantap Jiwa! 🚀',
-  'Luar Biasa Cepat! ⚡',
+  'Luar Biasa',
+  'Kerja Bagus',
+  'Tepat Sekali',
+  'Sempurna',
+  'Jawaban Sangat Tepat',
+  'Artikulasi Akurat',
 ];
 
 export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
@@ -318,10 +320,15 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#080E15] text-white p-6">
-        <div className="card-cyber p-8 text-center space-y-4 max-w-sm">
-          <div className="inline-block h-10 w-10 animate-spin rounded-full border-4 border-emerald-400 border-t-transparent" />
+        <div className="card-cyber-glow p-8 text-center space-y-4 max-w-sm animate-fade-in-scale">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center">
+            <LottiePlayer
+              animationPath="/animations/live_signal_pulse.json"
+              className="w-16 h-16"
+            />
+          </div>
           <h3 className="font-extrabold text-white text-base">Menyiapkan Sesi Belajar</h3>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-400 leading-relaxed">
             Menghubungkan AI Adaptive Engine & materi personalisasi...
           </p>
         </div>
@@ -390,9 +397,16 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#080E15] text-white p-6">
         <div className="card-cyber-glow w-full max-w-lg p-8 text-center space-y-6 shadow-[0_0_40px_rgba(0,229,117,0.2)]">
-          {/* Avatar Mentor Merayakan */}
-          <div className="flex justify-center -mb-2">
-            <div className="relative h-24 w-24 rounded-3xl overflow-hidden border-2 border-emerald-400 bg-[#080E15] shadow-[0_0_25px_rgba(0,229,117,0.4)]">
+          {/* Avatar Mentor Merayakan dengan Lottie Achievement Confetti */}
+          <div className="flex flex-col items-center justify-center -mb-4 relative">
+            <div className="w-56 h-36 -mb-12 pointer-events-none z-10">
+              <LottiePlayer
+                animationPath="/animations/achievement_certify.json"
+                loop={true}
+                className="w-full h-full scale-110"
+              />
+            </div>
+            <div className="relative h-24 w-24 rounded-3xl overflow-hidden border-2 border-emerald-400 bg-[#080E15] shadow-[0_0_25px_rgba(0,229,117,0.4)] z-0">
               <Image
                 src={companion.avatar}
                 alt={companion.name}
@@ -553,7 +567,7 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
                   : 'bg-[#142433] text-slate-300 border-[#1A2E40]'
               }`}
             >
-              🐢 Turtle Mode 0.65x {isTurtleMode ? 'ON' : 'OFF'}
+              Mode Lambat 0.65x {isTurtleMode ? 'Aktif' : 'Mati'}
             </button>
           </div>
 
@@ -679,10 +693,17 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
                   >
                     <span className="text-sm font-semibold">{opt}</span>
                     <span
-                      className={`flex h-7 w-7 items-center justify-center rounded-lg border text-xs font-mono font-black ${
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const letter = String.fromCharCode(65 + idx);
+                        speakLetter(letter);
+                        setSelectedOption(opt);
+                      }}
+                      title={`Dengarkan huruf ${String.fromCharCode(65 + idx)}`}
+                      className={`flex h-7 w-7 items-center justify-center rounded-lg border text-xs font-mono font-black transition hover:scale-110 active:scale-95 ${
                         isSelected
-                          ? 'border-emerald-400 bg-emerald-400 text-slate-950'
-                          : 'border-[#1E374D] bg-[#0A131C] text-slate-400'
+                          ? 'border-emerald-400 bg-emerald-400 text-slate-950 shadow-[0_0_8px_rgba(0,229,117,0.5)]'
+                          : 'border-[#1E374D] bg-[#0A131C] text-slate-400 hover:border-cyan-400 hover:text-cyan-300'
                       }`}
                     >
                       {String.fromCharCode(65 + idx)}
@@ -713,11 +734,11 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
                       type="button"
                       disabled={!!feedback}
                       onClick={() => {
-                        playBubblePop();
+                        speakWord(word, speechRate);
                         setWordOrderTokens((prev) => prev.filter((_, i) => i !== idx));
                         setAvailableTokens((prev) => [...prev, word]);
                       }}
-                      className="px-3 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-400/40 text-emerald-200 text-xs font-bold transition hover:bg-emerald-500/30 cursor-pointer"
+                      className="px-3 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-400/40 text-emerald-200 text-xs font-bold transition hover:bg-emerald-500/30 cursor-pointer active:scale-95"
                     >
                       {word}
                     </button>
@@ -797,7 +818,11 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
                   <div className="flex items-center gap-2">
                     {feedback.isCorrect ? (
                       <>
-                        <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                        <LottiePlayer
+                          animationPath="/animations/success_check.json"
+                          loop={false}
+                          className="h-6 w-6 shrink-0 -my-1"
+                        />
                         <span className="font-black text-sm text-emerald-300">
                           {celebrationTitle} (+{feedback.xpEarned} XP)
                         </span>
@@ -840,7 +865,15 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
                           }`}
                           title="Dengarkan penjelasan suara bilingual"
                         >
-                          <Volume2 className="h-3.5 w-3.5" />
+                          {isPlayingExplanation ? (
+                            <LottiePlayer
+                              animationPath="/animations/audio_speaker_wave.json"
+                              loop={true}
+                              className="h-3.5 w-3.5 shrink-0"
+                            />
+                          ) : (
+                            <Volume2 className="h-3.5 w-3.5" />
+                          )}
                           <span>{isPlayingExplanation ? 'Hentikan Suara' : 'Dengar Penjelasan'}</span>
                         </button>
                       </div>

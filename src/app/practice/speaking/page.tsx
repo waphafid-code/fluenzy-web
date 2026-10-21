@@ -4,11 +4,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Navigation } from '@/components/Navigation';
+import { LottiePlayer } from '@/components/ui/LottiePlayer';
 import { getUserPreferences, getCompanionInfo } from '@/lib/core/preferences';
 import {
   speakText,
   speakTurtleMode,
   speakWord,
+  speakLetter,
   playBubblePop,
   playCelebrationSound,
 } from '@/lib/audio/speech';
@@ -39,6 +41,9 @@ import {
   BookOpen,
   X,
   Volume1,
+  Lightbulb,
+  Activity,
+  Music,
 } from 'lucide-react';
 
 // Preset Engineering & Workplace Scenarios
@@ -542,7 +547,15 @@ export default function SpeakingPracticePage() {
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#142433] hover:bg-[#1E374D] text-cyan-400 text-xs font-bold border border-cyan-500/30 transition cursor-pointer"
                     title="Dengarkan pengucapan penutur asli kecepatan natural (0.95x)"
                   >
-                    <Volume2 className="h-3.5 w-3.5" />
+                    {isPlayingNative && !isTurtleMode ? (
+                      <LottiePlayer
+                        animationPath="/animations/audio_speaker_wave.json"
+                        className="h-4 w-4 shrink-0"
+                        loop={true}
+                      />
+                    ) : (
+                      <Volume2 className="h-3.5 w-3.5" />
+                    )}
                     <span>Native Audio</span>
                   </button>
 
@@ -552,9 +565,17 @@ export default function SpeakingPracticePage() {
                     onClick={() => handlePlayNativeAudio(true)}
                     disabled={isPlayingNative}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#142433] hover:bg-[#1E374D] text-amber-400 text-xs font-bold border border-amber-500/30 transition cursor-pointer"
-                    title="Turtle mode lambat 0.65x untuk mendengar artikulasi fonem kata demi kata"
+                    title="Mode lambat 0.65x untuk mendengar artikulasi fonem kata demi kata"
                   >
-                    <span>🐢</span>
+                    {isPlayingNative && isTurtleMode ? (
+                      <LottiePlayer
+                        animationPath="/animations/audio_speaker_wave.json"
+                        className="h-4 w-4 shrink-0"
+                        loop={true}
+                      />
+                    ) : (
+                      <Volume1 className="h-3.5 w-3.5" />
+                    )}
                     <span>0.65x Slow</span>
                   </button>
                 </div>
@@ -562,8 +583,9 @@ export default function SpeakingPracticePage() {
 
               {/* Context Hint */}
               {!isCustomMode && (
-                <p className="text-xs text-slate-400 italic">
-                  💡 {PRESET_SCENARIOS[selectedScenarioIndex].context}
+                <p className="text-xs text-slate-400 italic flex items-center gap-1.5">
+                  <Lightbulb className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                  <span>{PRESET_SCENARIOS[selectedScenarioIndex].context}</span>
                 </p>
               )}
 
@@ -629,16 +651,16 @@ export default function SpeakingPracticePage() {
                 {/* Legend */}
                 <div className="flex flex-wrap items-center gap-4 text-xs pt-3 border-t border-[#1E374D]/60 text-slate-400">
                   <span className="flex items-center gap-1.5">
-                    <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
-                    <span>🟢 80%+ (Native)</span>
+                    <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                    <span>80%+ (Native)</span>
                   </span>
                   <span className="flex items-center gap-1.5">
-                    <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
-                    <span>🟡 60-79% (Hampir Tepat)</span>
+                    <span className="h-2 w-2 rounded-full bg-amber-400" />
+                    <span>60-79% (Hampir Tepat)</span>
                   </span>
                   <span className="flex items-center gap-1.5">
-                    <span className="h-2.5 w-2.5 rounded-full bg-rose-400" />
-                    <span>🔴 &lt;60% (Perlu Latihan)</span>
+                    <span className="h-2 w-2 rounded-full bg-rose-400" />
+                    <span>&lt;60% (Perlu Latihan)</span>
                   </span>
                   <span className="text-[11px] text-slate-500 ml-auto">
                     *Klik kata untuk dengarkan & lihat tips fonem
@@ -681,14 +703,48 @@ export default function SpeakingPracticePage() {
                   </div>
 
                   {selectedWordDetail.feedback ? (
-                    <div className="text-xs text-emerald-300 bg-emerald-500/10 p-2.5 rounded-lg border border-emerald-500/20">
-                      💡 <strong>Tips Artikulasi:</strong> {selectedWordDetail.feedback}
+                    <div className="text-xs text-emerald-300 bg-emerald-500/10 p-2.5 rounded-lg border border-emerald-500/20 flex items-start gap-2">
+                      <Lightbulb className="h-3.5 w-3.5 text-emerald-400 mt-0.5 shrink-0" />
+                      <div>
+                        <strong>Tips Artikulasi:</strong> {selectedWordDetail.feedback}
+                      </div>
                     </div>
                   ) : (
                     <div className="text-xs text-slate-300 bg-[#0A131C] p-2.5 rounded-lg border border-[#1E374D]">
                       Ucapkan fonem <strong className="font-mono text-cyan-300">{selectedWordDetail.ipa}</strong> dengan artikulasi bibir dan lidah yang rileks.
                     </div>
                   )}
+
+                  {/* Interactive Letter Spelling Chips ("Setiap Memilih Huruf Ada Suara AI-nya") */}
+                  <div className="pt-2 border-t border-[#1E374D]/60 space-y-1.5">
+                    <div className="text-[11px] font-bold text-slate-400 flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        <Volume2 className="h-3 w-3 text-cyan-400" />
+                        <span>Ketuk Setiap Huruf untuk Dengarkan Suara AI:</span>
+                      </span>
+                      <span className="text-[10px] text-cyan-400 font-mono">Spell Audio</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedWordDetail.word.split('').map((char, charIdx) => {
+                        const isLetter = /[a-zA-Z]/.test(char);
+                        if (!isLetter) return null;
+                        return (
+                          <button
+                            key={charIdx}
+                            type="button"
+                            onClick={() => {
+                              playBubblePop();
+                              speakLetter(char.toUpperCase());
+                            }}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#0A131C] hover:bg-cyan-500 hover:text-slate-950 border border-[#1E374D] hover:border-cyan-400 text-xs font-mono font-black text-white transition cursor-pointer active:scale-95 shadow-sm"
+                            title={`Dengarkan pelafalan huruf ${char.toUpperCase()}`}
+                          >
+                            {char.toUpperCase()}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -709,21 +765,47 @@ export default function SpeakingPracticePage() {
                   ))}
                 </div>
 
-                {/* Big Mic Button */}
-                <div className="flex flex-col items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={handleToggleRecording}
-                    className={`h-16 w-16 rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer ${
-                      isRecording
-                        ? 'bg-rose-500 text-white animate-pulse shadow-[0_0_30px_rgba(244,63,94,0.7)] scale-105'
-                        : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black shadow-[0_0_25px_rgba(0,229,117,0.5)] hover:scale-105'
-                    }`}
-                  >
-                    {isRecording ? <MicOff className="h-7 w-7" /> : <Mic className="h-7 w-7" />}
-                  </button>
-                  <span className="text-xs font-bold text-slate-300">
-                    {isRecording ? 'Tekan untuk Berhenti Bicara' : 'Ketuk Mikrofon & Ucapkan Kalimat'}
+                {/* Modern Concentric Ripple Mic Button (Enhanced with Lottie Pulse) */}
+                <div className="flex flex-col items-center gap-3 py-4">
+                  <div className="relative flex items-center justify-center">
+                    {/* Lottie Pulse Animation when Recording */}
+                    {isRecording ? (
+                      <div className="absolute h-52 w-52 pointer-events-none z-0 flex items-center justify-center">
+                        <LottiePlayer
+                          animationPath="/animations/mic_pulse.json"
+                          loop={true}
+                          className="w-full h-full opacity-90 scale-125"
+                        />
+                      </div>
+                    ) : (
+                      <>
+                        {/* Ambient Outer Wave Ring */}
+                        <div className="absolute h-36 w-36 rounded-full bg-violet-500/10 scale-100 pointer-events-none" />
+                        {/* Ambient Middle Wave Ring */}
+                        <div className="absolute h-28 w-28 rounded-full bg-violet-500/20 pointer-events-none" />
+                      </>
+                    )}
+
+                    {/* Central Elevated Mic Button */}
+                    <button
+                      type="button"
+                      onClick={handleToggleRecording}
+                      className={`relative z-10 h-20 w-20 rounded-full flex items-center justify-center transition-all duration-300 cursor-pointer shadow-xl ${
+                        isRecording
+                          ? 'bg-gradient-to-tr from-rose-600 to-rose-400 text-white shadow-[0_0_35px_rgba(244,63,94,0.6)] scale-105'
+                          : 'bg-gradient-to-tr from-indigo-600 via-violet-600 to-purple-500 hover:from-indigo-500 hover:to-purple-400 text-white shadow-[0_10px_30px_rgba(124,58,237,0.45)] hover:scale-105'
+                      }`}
+                      title={isRecording ? 'Berhenti Bicara' : 'Tap the mic and speak'}
+                    >
+                      {isRecording ? (
+                        <MicOff className="h-9 w-9 text-white animate-pulse" />
+                      ) : (
+                        <Mic className="h-9 w-9 text-white drop-shadow" />
+                      )}
+                    </button>
+                  </div>
+                  <span className="text-xs font-bold text-slate-300 tracking-wide">
+                    {isRecording ? 'Sedang merekam... Tekan untuk berhenti' : 'Tap the mic and speak'}
                   </span>
                 </div>
 
@@ -750,10 +832,10 @@ export default function SpeakingPracticePage() {
                   <button
                     type="button"
                     onClick={handleManualEvaluation}
-                    className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-[0_0_15px_rgba(0,229,117,0.3)]"
+                    className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-[0_0_15px_rgba(124,58,237,0.3)]"
                   >
                     <Sparkles className="h-3.5 w-3.5" />
-                    <span>{liveTranscript ? 'Analisis Pengucapan Saya' : '⚡ Coba Simulasi Penilaian (Demo Mode)'}</span>
+                    <span>{liveTranscript ? 'Analisis Pengucapan Saya' : 'Coba Simulasi Penilaian (Demo Mode)'}</span>
                   </button>
 
                   <button
@@ -842,7 +924,10 @@ export default function SpeakingPracticePage() {
                   <div className="space-y-3">
                     <div className="space-y-1">
                       <div className="flex justify-between text-xs font-bold">
-                        <span className="text-slate-400">🗣️ Pronunciation (Akurasi)</span>
+                        <span className="text-slate-400 flex items-center gap-1.5">
+                          <Mic className="h-3.5 w-3.5 text-emerald-400" />
+                          <span>Pronunciation (Akurasi)</span>
+                        </span>
                         <span className="text-emerald-400 font-mono">{evaluation.pronunciationScore}%</span>
                       </div>
                       <div className="h-2 rounded-full bg-[#101C27] overflow-hidden">
@@ -855,7 +940,10 @@ export default function SpeakingPracticePage() {
 
                     <div className="space-y-1">
                       <div className="flex justify-between text-xs font-bold">
-                        <span className="text-slate-400">🌊 Fluency (Kelancaran)</span>
+                        <span className="text-slate-400 flex items-center gap-1.5">
+                          <Activity className="h-3.5 w-3.5 text-cyan-400" />
+                          <span>Fluency (Kelancaran)</span>
+                        </span>
                         <span className="text-cyan-400 font-mono">{evaluation.fluencyScore}%</span>
                       </div>
                       <div className="h-2 rounded-full bg-[#101C27] overflow-hidden">
@@ -868,7 +956,10 @@ export default function SpeakingPracticePage() {
 
                     <div className="space-y-1">
                       <div className="flex justify-between text-xs font-bold">
-                        <span className="text-slate-400">🎵 Intonation (Ritme)</span>
+                        <span className="text-slate-400 flex items-center gap-1.5">
+                          <Music className="h-3.5 w-3.5 text-amber-400" />
+                          <span>Intonation (Ritme)</span>
+                        </span>
                         <span className="text-amber-400 font-mono">{evaluation.intonationScore}%</span>
                       </div>
                       <div className="h-2 rounded-full bg-[#101C27] overflow-hidden">

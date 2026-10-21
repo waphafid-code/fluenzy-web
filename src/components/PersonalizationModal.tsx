@@ -12,6 +12,8 @@ import {
   Languages,
   Mic,
   Compass,
+  Server,
+  Cpu,
 } from 'lucide-react';
 import {
   getUserPreferences,
@@ -20,8 +22,11 @@ import {
   MascotChoice,
   AudioSpeedChoice,
   EnglishAccentChoice,
+  VoiceGenderChoice,
+  VoiceEngineProvider,
   COMPANIONS,
 } from '@/lib/core/preferences';
+import { LottieToggle } from '@/components/ui/LottieToggle';
 import {
   speakText,
   speakBilingualText,
@@ -51,6 +56,8 @@ export function PersonalizationModal({
     allEnglish: [],
   });
   const [isPlayingTest, setIsPlayingTest] = useState<string | null>(null);
+  const [vibeVoiceTesting, setVibeVoiceTesting] = useState(false);
+  const [vibeVoiceStatus, setVibeVoiceStatus] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -73,6 +80,68 @@ export function PersonalizationModal({
     setPrefs(next);
     saveUserPreferences(next);
     onPreferencesChanged?.(next);
+  }
+
+  async function handleTestVibeVoice() {
+    playBubblePop();
+    const endpoint = prefs.vibeVoiceEndpoint?.trim();
+    if (!endpoint) {
+      setVibeVoiceStatus('Masukkan endpoint URL VibeVoice terlebih dahulu.');
+      return;
+    }
+
+    setVibeVoiceTesting(true);
+    setVibeVoiceStatus('Menghubungkan ke VibeVoice server...');
+
+    try {
+      let url = endpoint;
+      if (!url.includes('/audio/speech') && !url.includes('/models/')) {
+        url = `${url.replace(/\/+$/, '')}/v1/audio/speech`;
+      }
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (prefs.vibeVoiceApiKey?.trim()) {
+        headers['Authorization'] = `Bearer ${prefs.vibeVoiceApiKey.trim()}`;
+      }
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          model: 'microsoft/VibeVoice-1.5B',
+          input: 'Hello from Microsoft VibeVoice in Fluenzy!',
+          voice: prefs.englishAccent === 'uk' ? 'british-coach' : 'american-tutor',
+          response_format: 'mp3',
+        }),
+      });
+
+      if (!res.ok) {
+        setVibeVoiceStatus(`Server merespons error ${res.status}.`);
+        setVibeVoiceTesting(false);
+        return;
+      }
+
+      const blob = await res.blob();
+      const audioUrl = URL.createObjectURL(blob);
+      const audio = new Audio(audioUrl);
+      setVibeVoiceStatus('✅ Terhubung! Memutar suara VibeVoice...');
+      audio.onended = () => {
+        URL.revokeObjectURL(audioUrl);
+        setVibeVoiceTesting(false);
+        setVibeVoiceStatus('✅ Sukses! VibeVoice aktif dan siap digunakan.');
+      };
+      audio.onerror = () => {
+        URL.revokeObjectURL(audioUrl);
+        setVibeVoiceTesting(false);
+        setVibeVoiceStatus('⚠️ Audio diterima namun gagal diputar.');
+      };
+      await audio.play();
+    } catch (e) {
+      setVibeVoiceTesting(false);
+      setVibeVoiceStatus(`❌ Gagal: ${e instanceof Error ? e.message : 'Koneksi ditolak'}`);
+    }
   }
 
   function handleTestEnglishVoice() {
@@ -169,7 +238,10 @@ export function PersonalizationModal({
             {/* Lily */}
             <button
               type="button"
-              onClick={() => updateField('mascot', 'lily')}
+              onClick={() => {
+                updateField('mascot', 'lily');
+                speakText(COMPANIONS.lily.quote, { gender: 'female' });
+              }}
               className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center text-center gap-2.5 cursor-pointer ${
                 prefs.mascot === 'lily' || prefs.mascot === 'girl'
                   ? 'border-emerald-400 bg-emerald-500/10 shadow-[0_0_20px_rgba(0,229,117,0.2)]'
@@ -193,7 +265,7 @@ export function PersonalizationModal({
                   )}
                 </div>
                 <div className="text-[11px] font-bold text-emerald-400 mt-0.5">
-                  AI Peer & Speaking Coach
+                  Karakter Cewek • AI Peer Coach
                 </div>
               </div>
             </button>
@@ -201,7 +273,10 @@ export function PersonalizationModal({
             {/* Arthur */}
             <button
               type="button"
-              onClick={() => updateField('mascot', 'arthur')}
+              onClick={() => {
+                updateField('mascot', 'arthur');
+                speakText(COMPANIONS.arthur.quote, { gender: 'male' });
+              }}
               className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center text-center gap-2.5 cursor-pointer ${
                 prefs.mascot === 'arthur' || prefs.mascot === 'boy'
                   ? 'border-cyan-400 bg-cyan-500/10 shadow-[0_0_20px_rgba(0,210,255,0.2)]'
@@ -225,7 +300,7 @@ export function PersonalizationModal({
                   )}
                 </div>
                 <div className="text-[11px] font-bold text-cyan-400 mt-0.5">
-                  Tech Lead & Diagnostic Mentor
+                  Karakter Cowok • Tech Lead Mentor
                 </div>
               </div>
             </button>
@@ -237,24 +312,202 @@ export function PersonalizationModal({
           <div className="flex items-center justify-between border-b border-[#1A2E40] pb-2.5">
             <label className="text-xs font-black uppercase tracking-wider text-cyan-300 flex items-center gap-2">
               <Languages className="h-4 w-4 text-cyan-400" />
-              Kustomisasi Aksen & Pengisi Suara (Voice-Over)
+              Kustomisasi Suara & Gender AI
             </label>
             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
               Adaptif Dwibahasa
             </span>
           </div>
 
-          {/* A. Aksen Bahasa Inggris */}
+          {/* Gender Suara AI (Voice Gender Setting) */}
           <div className="space-y-2">
             <span className="text-xs font-bold text-slate-300 block">
-              1. Pilihan Aksen Bahasa Inggris:
+              1. Karakter Gender Suara AI:
+            </span>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              {[
+                {
+                  id: 'auto' as VoiceGenderChoice,
+                  label: 'Sesuai Maskot (Otomatis)',
+                  desc: 'Arthur: Suara Cowok, Lily: Suara Cewek',
+                },
+                {
+                  id: 'male' as VoiceGenderChoice,
+                  label: 'Suara Pria (Male)',
+                  desc: 'Karakter suara cowok yang berwibawa & natural',
+                },
+                {
+                  id: 'female' as VoiceGenderChoice,
+                  label: 'Suara Wanita (Female)',
+                  desc: 'Karakter suara cewek yang hangat & artikulatif',
+                },
+              ].map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => {
+                    updateField('voiceGender', item.id);
+                    const effective =
+                      item.id === 'auto'
+                        ? prefs.mascot === 'girl' || prefs.mascot === 'lily'
+                          ? 'female'
+                          : 'male'
+                        : item.id;
+                    const sample =
+                      effective === 'male'
+                        ? 'Hello! This is the male English coach voice.'
+                        : 'Hello! This is the female English coach voice.';
+                    speakText(sample, { gender: effective });
+                  }}
+                  className={`p-3 rounded-xl border text-xs font-bold transition flex flex-col justify-between text-left cursor-pointer ${
+                    prefs.voiceGender === item.id
+                      ? 'border-cyan-400 bg-cyan-500/20 text-cyan-200 shadow-[0_0_12px_rgba(0,210,255,0.25)]'
+                      : 'border-[#1A2E40] bg-[#101C27] text-slate-400 hover:border-slate-500'
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-white font-black">{item.label}</span>
+                    {prefs.voiceGender === item.id && (
+                      <Check className="h-4 w-4 text-cyan-400 shrink-0" />
+                    )}
+                  </div>
+                  <span className="text-[10px] font-normal text-slate-400 mt-1 leading-relaxed">
+                    {item.desc}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Penyedia Mesin Suara (Engine Provider) */}
+          <div className="space-y-2">
+            <span className="text-xs font-bold text-slate-300 block">
+              2. Mesin Pengisi Suara (Voice Engine):
+            </span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => updateField('voiceEngine', 'browser-groq')}
+                className={`py-2 px-3 rounded-xl border text-xs font-bold transition flex items-center justify-between cursor-pointer ${
+                  prefs.voiceEngine === 'browser-groq'
+                    ? 'border-cyan-400 bg-cyan-500/20 text-cyan-200 shadow-[0_0_12px_rgba(0,210,255,0.25)]'
+                    : 'border-[#1A2E40] bg-[#101C27] text-slate-400 hover:border-slate-500'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Cpu className="h-4 w-4 text-cyan-400" />
+                  <div className="text-left">
+                    <div className="text-white">Standar (Browser Neural TTS)</div>
+                    <div className="text-[10px] font-normal text-slate-400">Instan, bebas kuota, & hemat memori</div>
+                  </div>
+                </div>
+                {prefs.voiceEngine === 'browser-groq' && <Check className="h-4 w-4 text-cyan-400" />}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => updateField('voiceEngine', 'vibevoice')}
+                className={`py-2 px-3 rounded-xl border text-xs font-bold transition flex items-center justify-between cursor-pointer ${
+                  prefs.voiceEngine === 'vibevoice'
+                    ? 'border-emerald-400 bg-emerald-500/20 text-emerald-200 shadow-[0_0_12px_rgba(16,185,129,0.25)]'
+                    : 'border-[#1A2E40] bg-[#101C27] text-slate-400 hover:border-slate-500'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Server className="h-4 w-4 text-emerald-400" />
+                  <div className="text-left">
+                    <div className="text-white">Microsoft VibeVoice API</div>
+                    <div className="text-[10px] font-normal text-slate-400">Frontier Voice AI, ultra-natural</div>
+                  </div>
+                </div>
+                {prefs.voiceEngine === 'vibevoice' && <Check className="h-4 w-4 text-emerald-400" />}
+              </button>
+            </div>
+
+            {/* Panel Konfigurasi VibeVoice */}
+            {prefs.voiceEngine === 'vibevoice' && (
+              <div className="mt-2 p-3 rounded-xl bg-[#0F1B27] border border-emerald-500/30 space-y-2.5 animate-in fade-in duration-150">
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-bold text-slate-300">
+                      VibeVoice Endpoint URL:
+                    </label>
+                    <div className="flex gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => updateField('vibeVoiceEndpoint', 'http://localhost:8000')}
+                        className="text-[10px] px-1.5 py-0.5 rounded bg-[#1A2E40] text-cyan-300 hover:bg-[#253E55]"
+                      >
+                        Localhost (8000)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateField(
+                            'vibeVoiceEndpoint',
+                            'https://api-inference.huggingface.co/models/microsoft/VibeVoice-1.5B'
+                          )
+                        }
+                        className="text-[10px] px-1.5 py-0.5 rounded bg-[#1A2E40] text-emerald-300 hover:bg-[#253E55]"
+                      >
+                        Hugging Face
+                      </button>
+                    </div>
+                  </div>
+                  <input
+                    type="text"
+                    value={prefs.vibeVoiceEndpoint || ''}
+                    onChange={(e) => updateField('vibeVoiceEndpoint', e.target.value)}
+                    placeholder="http://localhost:8000 atau https://..."
+                    className="w-full text-xs font-mono bg-[#081018] border border-[#1A2E40] rounded-lg px-2.5 py-1.5 text-emerald-300 focus:outline-none focus:border-emerald-400"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-slate-300">
+                    API Key / Bearer Token (Opsional):
+                  </label>
+                  <input
+                    type="password"
+                    value={prefs.vibeVoiceApiKey || ''}
+                    onChange={(e) => updateField('vibeVoiceApiKey', e.target.value)}
+                    placeholder="hf_xxxxxxxx atau API token server"
+                    className="w-full text-xs font-mono bg-[#081018] border border-[#1A2E40] rounded-lg px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-emerald-400"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between pt-1">
+                  <button
+                    type="button"
+                    onClick={handleTestVibeVoice}
+                    disabled={vibeVoiceTesting}
+                    className="text-xs font-bold px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    <Server className="h-3.5 w-3.5" />
+                    <span>{vibeVoiceTesting ? 'Menghubungkan...' : 'Tes Koneksi VibeVoice'}</span>
+                  </button>
+
+                  {vibeVoiceStatus && (
+                    <span className="text-[11px] text-slate-300 max-w-[280px] truncate">
+                      {vibeVoiceStatus}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Pilihan Aksen Bahasa Inggris */}
+          <div className="space-y-2">
+            <span className="text-xs font-bold text-slate-300 block">
+              3. Pilihan Aksen Bahasa Inggris:
             </span>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {[
-                { id: 'auto' as EnglishAccentChoice, label: '✨ Auto Natural', flag: '🌍' },
-                { id: 'us' as EnglishAccentChoice, label: 'American (US)', flag: '🇺🇸' },
-                { id: 'uk' as EnglishAccentChoice, label: 'British (UK)', flag: '🇬🇧' },
-                { id: 'au' as EnglishAccentChoice, label: 'Australian (AU)', flag: '🇦🇺' },
+                { id: 'auto' as EnglishAccentChoice, label: 'Auto Natural', code: 'AUTO' },
+                { id: 'us' as EnglishAccentChoice, label: 'American (US)', code: 'US' },
+                { id: 'uk' as EnglishAccentChoice, label: 'British (UK)', code: 'UK' },
+                { id: 'au' as EnglishAccentChoice, label: 'Australian (AU)', code: 'AU' },
               ].map((acc) => (
                 <button
                   key={acc.id}
@@ -267,7 +520,9 @@ export function PersonalizationModal({
                   }`}
                 >
                   <span className="flex items-center gap-1.5">
-                    <span>{acc.flag}</span>
+                    <span className="text-[10px] font-mono px-1 py-0.2 rounded bg-[#162738] text-cyan-400 border border-cyan-500/30">
+                      {acc.code}
+                    </span>
                     <span>{acc.label}</span>
                   </span>
                   {prefs.englishAccent === acc.id && <Check className="h-3.5 w-3.5 text-cyan-400 shrink-0" />}
@@ -276,7 +531,7 @@ export function PersonalizationModal({
             </div>
           </div>
 
-          {/* B. Dropdown Suara Spesifik Bahasa Inggris */}
+          {/* Dropdown Suara Spesifik */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
             <div className="space-y-1.5">
               <label className="text-[11px] font-bold text-slate-300 flex items-center gap-1.5">
@@ -288,7 +543,7 @@ export function PersonalizationModal({
                 onChange={(e) => updateField('customEnglishVoice', e.target.value)}
                 className="w-full text-xs font-mono bg-[#101C27] border border-[#1A2E40] rounded-xl px-3 py-2 text-white focus:outline-none focus:border-cyan-400"
               >
-                <option value="auto">✨ Otomatis Terbaik (Rekomendasi)</option>
+                <option value="auto">Otomatis Natural (Rekomendasi)</option>
                 {voices.allEnglish.map((v) => (
                   <option key={v.name} value={v.name}>
                     {v.name} ({v.lang})
@@ -297,7 +552,7 @@ export function PersonalizationModal({
               </select>
             </div>
 
-            {/* C. Dropdown Suara Bahasa Indonesia */}
+            {/* Dropdown Suara Bahasa Indonesia */}
             <div className="space-y-1.5">
               <label className="text-[11px] font-bold text-slate-300 flex items-center gap-1.5">
                 <Mic className="h-3.5 w-3.5 text-emerald-400" />
@@ -308,7 +563,7 @@ export function PersonalizationModal({
                 onChange={(e) => updateField('customIndonesianVoice', e.target.value)}
                 className="w-full text-xs font-mono bg-[#101C27] border border-[#1A2E40] rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-400"
               >
-                <option value="auto">✨ Otomatis Natural Indonesia (Rekomendasi)</option>
+                <option value="auto">Otomatis Natural Indonesia (Rekomendasi)</option>
                 {voices.indonesian.map((v) => (
                   <option key={v.name} value={v.name}>
                     {v.name} ({v.lang})
@@ -318,10 +573,10 @@ export function PersonalizationModal({
             </div>
           </div>
 
-          {/* D. Interactive Stress Test Buttons */}
+          {/* Interactive Stress Test Buttons */}
           <div className="pt-2 border-t border-[#1A2E40] space-y-2">
             <span className="text-[11px] font-bold text-slate-400 block">
-              Uji Coba Langsung Aksen & Adaptasi Bahasa:
+              Uji Coba Langsung Suara & Artikulasi:
             </span>
             <div className="flex flex-wrap gap-2">
               <button
@@ -334,7 +589,7 @@ export function PersonalizationModal({
                 }`}
               >
                 <Volume2 className="h-3.5 w-3.5" />
-                <span>{isPlayingTest === 'en' ? 'Memutar Aksen Inggris...' : '🔊 Tes Aksen Inggris'}</span>
+                <span>{isPlayingTest === 'en' ? 'Memutar Suara Inggris...' : 'Tes Suara Inggris'}</span>
               </button>
 
               <button
@@ -347,7 +602,7 @@ export function PersonalizationModal({
                 }`}
               >
                 <Volume2 className="h-3.5 w-3.5" />
-                <span>{isPlayingTest === 'id' ? 'Memutar Suara Indonesia...' : '🔊 Tes Suara Indonesia'}</span>
+                <span>{isPlayingTest === 'id' ? 'Memutar Suara Indonesia...' : 'Tes Suara Indonesia'}</span>
               </button>
 
               <button
@@ -361,7 +616,7 @@ export function PersonalizationModal({
               >
                 <Sparkles className="h-3.5 w-3.5 text-amber-400" />
                 <span>
-                  {isPlayingTest === 'bilingual' ? 'Memutar Bahasa Campuran...' : '✨ Tes Campuran Dwibahasa'}
+                  {isPlayingTest === 'bilingual' ? 'Memutar Campuran...' : 'Tes Campuran Dwibahasa'}
                 </span>
               </button>
             </div>
@@ -421,6 +676,30 @@ export function PersonalizationModal({
                 </span>
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* 5. TOGGLE INTERAKTIF: AUDIO & EFEK SUARA */}
+        <div className="space-y-3">
+          <label className="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-2">
+            <Sliders className="h-4 w-4 text-emerald-400" />
+            Preferensi Suara & Interaksi
+          </label>
+          <div className="space-y-2.5">
+            <LottieToggle
+              id="pref-sound-effects"
+              checked={prefs.soundEffectsEnabled}
+              onChange={(checked) => updateField('soundEffectsEnabled', checked)}
+              label="Efek Suara Sentuhan & Haptik (Sound FX)"
+              description="Memutar efek audio saat menekan tombol, menyusun huruf, atau memilih jawaban."
+            />
+            <LottieToggle
+              id="pref-auto-pronounce"
+              checked={prefs.autoPronounce}
+              onChange={(checked) => updateField('autoPronounce', checked)}
+              label="Pelafalan Otomatis (Auto-Pronounce)"
+              description="Secara otomatis menyuarakan kalimat atau kosakata baru begitu kartu latihan dibuka."
+            />
           </div>
         </div>
 

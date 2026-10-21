@@ -109,13 +109,29 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#080E15] text-white">
-        <div className="text-center space-y-3">
-          <div className="inline-block h-10 w-10 animate-spin rounded-full border-4 border-emerald-400 border-t-transparent" />
-          <p className="text-sm font-medium text-slate-400">
-            Menganalisis penguasaan dan riwayat belajar...
-          </p>
-        </div>
+      <div className="min-h-screen bg-[#080E15] text-white pb-24 md:pb-12">
+        <Navigation activeTab="insights" />
+        <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 w-full space-y-8">
+          {/* Shimmer Header */}
+          <div className="space-y-3">
+            <div className="skeleton skeleton-text w-32 h-4" />
+            <div className="skeleton skeleton-text w-64 h-8" />
+            <div className="skeleton skeleton-text w-48 h-4" />
+          </div>
+          {/* Shimmer Cards Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div className="lg:col-span-4 skeleton h-80" />
+            <div className="lg:col-span-4 skeleton h-80" />
+            <div className="lg:col-span-4 skeleton h-80" />
+          </div>
+          {/* Shimmer Stats Row */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="skeleton h-24" />
+            <div className="skeleton h-24" />
+            <div className="skeleton h-24" />
+            <div className="skeleton h-24" />
+          </div>
+        </main>
       </div>
     );
   }
@@ -169,7 +185,7 @@ export default function DashboardPage() {
 
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 w-full space-y-8">
         {/* HEADER SECTION (Matching Reference Image 1 Screen 3) */}
-        <div className="space-y-1">
+        <div className="animate-fade-in-up space-y-1">
           <div className="flex items-center gap-2">
             <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400 font-black text-xs border border-emerald-500/40">
               📊
@@ -187,7 +203,7 @@ export default function DashboardPage() {
         </div>
 
         {/* 3 CORE ANALYTIC CARDS (Global Career Readiness, 5 Pilar Radar, Sprint Mingguan) */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="animate-fade-in-up delay-200 grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* 1. GLOBAL CAREER READINESS CARD (Cols 1-4) */}
           <div className="lg:col-span-4 card-cyber p-6 space-y-6 flex flex-col justify-between">
             <div>

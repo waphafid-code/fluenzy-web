@@ -25,7 +25,15 @@ import {
   Clock,
 } from 'lucide-react';
 import { Navigation } from '@/components/Navigation';
-import { playBubblePop, playCelebrationSound, speakText, speakTurtleMode } from '@/lib/audio/speech';
+import { LottiePlayer } from '@/components/ui/LottiePlayer';
+import {
+  playBubblePop,
+  playCelebrationSound,
+  speakText,
+  speakTurtleMode,
+  speakLetter,
+  speakWord,
+} from '@/lib/audio/speech';
 
 export default function ArenaPage() {
   // Mode Active states & simulated interaction
@@ -82,7 +90,7 @@ export default function ArenaPage() {
 
   // Syntax Chip Click
   function handleAddChip(word: string, index: number) {
-    playBubblePop();
+    speakWord(word);
     setConstructedSentence([...constructedSentence, word]);
     const remaining = [...chips];
     remaining.splice(index, 1);
@@ -96,9 +104,9 @@ export default function ArenaPage() {
     setSyntaxChecked(false);
   }
 
-  // Spelling Tile Click
+  // Spelling Tile Click ("Setiap Memilih Huruf Ada Suara AI-nya")
   function handleAddTile(letter: string, index: number) {
-    playBubblePop();
+    speakLetter(letter);
     const next = [...spelledWord, letter];
     setSpelledWord(next);
     const remaining = [...spellingTiles];
@@ -106,7 +114,10 @@ export default function ArenaPage() {
     setSpellingTiles(remaining);
 
     if (next.join('') === spellingTarget) {
-      playCelebrationSound();
+      setTimeout(() => {
+        speakWord(spellingTarget);
+        playCelebrationSound();
+      }, 300);
     }
   }
 
@@ -122,10 +133,10 @@ export default function ArenaPage() {
 
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 w-full space-y-8">
         {/* ARENA HEADER (Matching Reference Image 1 Screen 2) */}
-        <div className="space-y-1">
+        <div className="animate-fade-in-down space-y-1">
           <div className="flex items-center gap-2">
             <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400 font-black text-xs border border-emerald-500/40">
-              ⚔️
+              <Swords className="h-3.5 w-3.5 text-emerald-400" />
             </span>
             <span className="text-xs font-black uppercase tracking-wider text-emerald-400">
               Pusat Latihan Gamifikasi
@@ -142,7 +153,7 @@ export default function ArenaPage() {
         {/* 2 HIGHLIGHT CARDS (Latihan Titik Lemah & Tantangan Harian) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Latihan Titik Lemah */}
-          <div className="card-cyber-glow p-5 flex items-center justify-between gap-4">
+          <div className="animate-fade-in-up card-cyber-glow card-hover-lift p-5 flex items-center justify-between gap-4">
             <div className="flex items-center gap-3.5">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-500/20 border border-rose-500/40 text-rose-400 shadow-[0_0_15px_rgba(244,63,94,0.3)]">
                 <Heart className="h-6 w-6 fill-rose-500 text-rose-500 animate-pulse" />
@@ -151,7 +162,7 @@ export default function ArenaPage() {
                 <div className="flex items-center gap-2">
                   <h3 className="text-base font-black text-white">Latihan Titik Lemah</h3>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40">
-                    Zero Risk ❤️
+                    Zero Risk
                   </span>
                 </div>
                 <p className="text-xs text-slate-400 mt-0.5">
@@ -169,16 +180,16 @@ export default function ArenaPage() {
           </div>
 
           {/* Tantangan Harian */}
-          <div className="card-cyber-cyan p-5 flex items-center justify-between gap-4">
+          <div className="animate-fade-in-up card-cyber-cyan card-hover-lift p-5 flex items-center justify-between gap-4" style={{ animationDelay: '100ms' }}>
             <div className="flex items-center gap-3.5">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-500/20 border border-cyan-500/40 text-cyan-400 shadow-[0_0_15px_rgba(0,210,255,0.3)]">
-                <Gem className="h-6 w-6 fill-cyan-400 text-cyan-400" />
+                <Gem className="h-6 w-6 fill-cyan-400 text-cyan-400 animate-bounce-subtle" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="text-base font-black text-white">Tantangan Harian</h3>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
-                    +30 Gems 💎
+                    +30 Gems
                   </span>
                 </div>
                 <p className="text-xs text-slate-400 mt-0.5">
@@ -235,23 +246,29 @@ export default function ArenaPage() {
                 <div className="text-xs text-cyan-400 font-mono">
                   /aɪd laɪk tə dɪˈskʌs ðə nekst steps/
                 </div>
-                <div className="text-[11px] text-slate-400">
-                  💡 Tips: Tekanan pada kata <span className="text-emerald-400 font-bold">&apos;next&apos;</span>
+                <div className="text-[11px] text-slate-400 flex items-center justify-center gap-1.5">
+                  <Sparkles className="h-3 w-3 text-emerald-400" />
+                  <span>Tips: Tekanan pada kata <span className="text-emerald-400 font-bold">&apos;next&apos;</span></span>
                 </div>
               </div>
 
               {/* Animated Waveform & Mic Button */}
               <div className="flex flex-col items-center justify-center py-2 space-y-3">
-                <div className="flex items-center justify-center gap-1.5 h-10 w-full max-w-xs">
-                  {[40, 75, 90, 60, 30, 85, 95, 70, 50, 80, 65, 45, 90, 60].map((h, i) => (
-                    <div
-                      key={i}
-                      style={{ height: isRecording ? `${h}%` : '20%' }}
-                      className={`w-1.5 rounded-full transition-all duration-150 ${
-                        isRecording ? 'bg-emerald-400 shadow-[0_0_8px_rgba(0,229,117,0.5)]' : 'bg-slate-700'
-                      }`}
+                <div className="flex items-center justify-center gap-1.5 h-12 w-full max-w-xs">
+                  {isRecording ? (
+                    <LottiePlayer
+                      animationPath="/animations/mic_pulse.json"
+                      className="w-16 h-16"
                     />
-                  ))}
+                  ) : (
+                    [40, 75, 90, 60, 30, 85, 95, 70, 50, 80, 65, 45, 90, 60].map((h, i) => (
+                      <div
+                        key={i}
+                        style={{ height: '20%' }}
+                        className="w-1.5 rounded-full bg-slate-700 transition-all duration-150"
+                      />
+                    ))
+                  )}
                 </div>
 
                 <button
@@ -309,7 +326,7 @@ export default function ArenaPage() {
                       : 'bg-[#142433] text-slate-300 border-[#1A2E40]'
                   }`}
                 >
-                  🐢 Turtle Mode 0.65x {isTurtleMode ? 'ON' : 'OFF'}
+                  Mode Lambat 0.65x {isTurtleMode ? 'ON' : 'OFF'}
                 </button>
               </div>
 
@@ -329,15 +346,24 @@ export default function ArenaPage() {
                     {isPlayingAudio ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 fill-slate-950 ml-0.5" />}
                   </button>
                   <div className="flex-1 flex items-center gap-1 h-8">
-                    {[35, 60, 80, 45, 90, 70, 50, 85, 65, 40, 75, 95, 55, 30, 80, 60].map((h, i) => (
-                      <div
-                        key={i}
-                        style={{ height: `${h}%` }}
-                        className={`flex-1 rounded-full ${
-                          i < 7 ? 'bg-cyan-400' : 'bg-slate-700'
-                        }`}
-                      />
-                    ))}
+                    {isPlayingAudio ? (
+                      <div className="w-full flex items-center justify-center">
+                        <LottiePlayer
+                          animationPath="/animations/audio_speaker_wave.json"
+                          className="h-10 w-28"
+                        />
+                      </div>
+                    ) : (
+                      [35, 60, 80, 45, 90, 70, 50, 85, 65, 40, 75, 95, 55, 30, 80, 60].map((h, i) => (
+                        <div
+                          key={i}
+                          style={{ height: `${h}%` }}
+                          className={`flex-1 rounded-full ${
+                            i < 7 ? 'bg-cyan-400' : 'bg-slate-700'
+                          }`}
+                        />
+                      ))
+                    )}
                   </div>
                 </div>
               </div>
@@ -504,12 +530,31 @@ export default function ArenaPage() {
                 </div>
                 <div className="flex items-center gap-2 text-xs font-bold text-amber-400">
                   <Clock className="h-4 w-4" />
-                  <span>Blitz Mode ⏱️ 60s</span>
+                  <span>Blitz Mode (60s)</span>
                 </div>
               </div>
 
               {/* Target Slots */}
-              <div className="p-5 rounded-xl bg-[#0A131C] border border-[#1A2E40] flex flex-col items-center justify-center space-y-4">
+              <div className="p-5 rounded-xl bg-[#0A131C] border border-[#1A2E40] flex flex-col items-center justify-center space-y-4 relative">
+                {spelledWord.join('') === spellingTarget && (
+                  <div className="absolute inset-0 bg-[#0A131C]/90 backdrop-blur-sm rounded-xl flex flex-col items-center justify-center z-10 animate-fade-in-scale">
+                    <LottiePlayer
+                      animationPath="/animations/success_check.json"
+                      loop={false}
+                      className="w-20 h-20"
+                    />
+                    <span className="text-emerald-400 font-black text-sm tracking-wide">
+                      SEMPURNA! &ldquo;DEPLOY&rdquo; BERHASIL DIBUAT
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleResetSpelling}
+                      className="mt-2 text-xs font-bold text-cyan-400 hover:underline cursor-pointer"
+                    >
+                      Coba Lagi
+                    </button>
+                  </div>
+                )}
                 <div className="flex gap-2">
                   {spellingTarget.split('').map((_, idx) => (
                     <div

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import {
+  Home,
   Compass,
   Swords,
   BarChart3,
@@ -60,7 +61,7 @@ export const NAV_TABS: NavTabItem[] = [
 ];
 
 interface NavigationProps {
-  activeTab?: 'roadmap' | 'arena' | 'insights' | 'profile';
+  activeTab?: 'home' | 'roadmap' | 'arena' | 'insights' | 'profile';
 }
 
 export function Navigation({ activeTab }: NavigationProps) {
@@ -87,7 +88,9 @@ export function Navigation({ activeTab }: NavigationProps) {
   // Auto-detect current active tab from pathname if not explicitly passed
   const currentTab =
     activeTab ||
-    (pathname.startsWith('/roadmap')
+    (pathname === '/home' || pathname.startsWith('/home')
+      ? 'home'
+      : pathname.startsWith('/roadmap')
       ? 'roadmap'
       : pathname.startsWith('/arena') || pathname.startsWith('/practice')
       ? 'arena'
@@ -113,7 +116,7 @@ export function Navigation({ activeTab }: NavigationProps) {
   return (
     <>
       {/* TOP DESKTOP HEADER */}
-      <header className="sticky top-0 z-40 bg-[#080E15]/90 backdrop-blur-md border-b border-[#1A2E40]">
+      <header className="animate-fade-in-down sticky top-0 z-40 bg-[#080E15]/90 backdrop-blur-md border-b border-[#1A2E40]">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2.5 sm:px-6">
           {/* LOGO & BRAND */}
           <div className="flex items-center gap-3">
@@ -153,11 +156,11 @@ export function Navigation({ activeTab }: NavigationProps) {
                   onClick={handleTabClick}
                   className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition ${
                     isActive
-                      ? 'tab-cyber-active font-extrabold'
+                      ? 'tab-cyber-active font-extrabold text-violet-300'
                       : 'tab-cyber-inactive'
                   }`}
                 >
-                  <Icon className={`h-4 w-4 ${isActive ? 'text-emerald-400' : 'text-slate-400'}`} />
+                  <Icon className={`h-4 w-4 ${isActive ? 'text-violet-400' : 'text-slate-400'}`} />
                   <span>{tab.label}</span>
                 </Link>
               );
@@ -167,7 +170,7 @@ export function Navigation({ activeTab }: NavigationProps) {
           {/* RIGHT GAMIFIED STATS & COMPANION AVATAR */}
           <div className="flex items-center gap-2 sm:gap-3">
             {/* Streak */}
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#101C27] border border-[#1A2E40] text-xs font-bold text-amber-400 shadow-xs">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#101C27] border border-[#1A2E40] text-xs font-bold text-amber-400 shadow-xs animate-fire-glow">
               <Flame className="h-4 w-4 fill-amber-400 text-amber-500 animate-pulse" />
               <span className="tabular-nums">14 Hari</span>
             </div>
@@ -179,7 +182,7 @@ export function Navigation({ activeTab }: NavigationProps) {
             </div>
 
             {/* Gems */}
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#101C27] border border-[#1A2E40] text-xs font-bold text-cyan-400 shadow-xs">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#101C27] border border-[#1A2E40] text-xs font-bold text-cyan-400 shadow-xs animate-glow-pulse">
               <Gem className="h-4 w-4 fill-cyan-400 text-cyan-500" />
               <span className="tabular-nums">320</span>
             </div>
@@ -229,7 +232,7 @@ export function Navigation({ activeTab }: NavigationProps) {
       </header>
 
       {/* MOBILE BOTTOM NAVIGATION BAR (Matching Reference Image "Bottom Navigation Bar") */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#080E15]/95 backdrop-blur-lg border-t border-[#1A2E40] px-2 py-1.5 flex items-center justify-around shadow-[0_-4px_20px_rgba(0,0,0,0.5)]">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0B1118]/95 backdrop-blur-lg border-t border-[#1E2E40] px-2 py-1.5 flex items-center justify-around shadow-[0_-4px_20px_rgba(0,0,0,0.5)]">
         {NAV_TABS.map((tab) => {
           const Icon = tab.icon;
           const isActive = currentTab === tab.id;
@@ -240,11 +243,11 @@ export function Navigation({ activeTab }: NavigationProps) {
               onClick={handleTabClick}
               className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition ${
                 isActive
-                  ? 'text-emerald-400 bg-emerald-500/10'
+                  ? 'text-violet-400 bg-violet-500/15'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <Icon className={`h-5 w-5 ${isActive ? 'text-emerald-400' : 'text-slate-400'}`} />
+              <Icon className={`h-5 w-5 ${isActive ? 'text-violet-400' : 'text-slate-400'}`} />
               <span className="text-[10px] font-bold mt-0.5">{tab.label}</span>
             </Link>
           );

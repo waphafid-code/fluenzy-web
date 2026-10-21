@@ -20,12 +20,33 @@ export async function POST(request: Request) {
     } = body;
 
     // 1. Ambil data User & Soal
-    const user = await prisma.user.findFirst({
+    let user = await prisma.user.findFirst({
       where: { email: userEmail },
       include: { stats: true },
     });
+
     if (!user) {
-      return NextResponse.json({ error: 'Pengguna tidak ditemukan' }, { status: 404 });
+      user = await prisma.user.findFirst({
+        include: { stats: true },
+      });
+    }
+
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          email: userEmail,
+          name: 'Pelajar Fluenzy',
+          passwordHash: 'guest_managed',
+          stats: {
+            create: {
+              totalXp: 100,
+              hearts: 5,
+              currentStreak: 1,
+            },
+          },
+        },
+        include: { stats: true },
+      });
     }
 
     const question = await prisma.question.findUnique({

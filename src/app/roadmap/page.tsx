@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { LottiePlayer } from '@/components/ui/LottiePlayer';
 import {
   BookOpen,
   PenTool,
@@ -191,7 +192,7 @@ export default function RoadmapPage() {
 
       <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 w-full space-y-8">
         {/* ROADMAP HERO BANNER (Matching Reference Image 1 Screen 1) */}
-        <div className="card-cyber p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="animate-fade-in-up card-cyber p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-black uppercase tracking-wider text-emerald-400">
@@ -221,7 +222,7 @@ export default function RoadmapPage() {
         </div>
 
         {/* WINDING 50 STAGES PATH */}
-        <div className="relative py-8 flex flex-col items-center space-y-7">
+        <div className="animate-fade-in-up delay-200 relative py-8 flex flex-col items-center space-y-7">
           {/* Glowing connecting line */}
           <div className="absolute top-4 bottom-4 w-1 bg-gradient-to-b from-emerald-500/40 via-cyan-500/30 to-purple-500/30 rounded-full shadow-[0_0_15px_rgba(0,229,117,0.3)] pointer-events-none -z-0" />
 
@@ -249,6 +250,21 @@ export default function RoadmapPage() {
                   className="relative flex items-center justify-center transition-all duration-300 z-10"
                   style={{ transform: `translateX(${offset}px)` }}
                 >
+                  {isCurrent && (
+                    <div className="absolute -top-12 sm:-top-14 pointer-events-none flex flex-col items-center z-20">
+                      <div className="w-12 h-12 sm:w-14 sm:h-14">
+                        <LottiePlayer
+                          animationPath="/animations/roadmap_beacon.json"
+                          loop={true}
+                          className="w-full h-full"
+                        />
+                      </div>
+                      <span className="text-[9px] font-black tracking-wider uppercase bg-purple-950/90 text-purple-200 border border-purple-500/50 px-2 py-0.5 rounded-full shadow-lg shadow-purple-500/30 -mt-2">
+                        Mulai Disini!
+                      </span>
+                    </div>
+                  )}
+
                   {/* Stage Button */}
                   <button
                     type="button"
@@ -289,8 +305,12 @@ export default function RoadmapPage() {
       <div className="fixed bottom-16 md:bottom-6 left-0 right-0 z-30 px-4 flex justify-center pointer-events-none">
         <div className="card-cyber-glow w-full max-w-lg p-4 flex items-center justify-between gap-4 pointer-events-auto shadow-[0_8px_30px_rgba(0,0,0,0.8)]">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 font-black">
-              13
+            <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 font-black overflow-hidden shadow-[0_0_15px_rgba(16,185,129,0.3)]">
+              <LottiePlayer
+                animationPath="/animations/level_unlock.json"
+                loop={true}
+                className="w-10 h-10 scale-125"
+              />
             </div>
             <div>
               <div className="text-xs font-bold text-slate-400">Tahap Aktif Saat Ini</div>
@@ -298,7 +318,7 @@ export default function RoadmapPage() {
               <div className="text-[11px] text-emerald-400 font-bold flex items-center gap-2 mt-0.5">
                 <span>+50 XP</span>
                 <span>•</span>
-                <span>+15 Gems 💎</span>
+                <span>+15 Gems</span>
               </div>
             </div>
           </div>

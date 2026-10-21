@@ -109,9 +109,26 @@ export function AuthForm({ mode }: AuthFormProps) {
     }
   }
 
-  // Handle Login dengan Google OAuth (Coming soon badge)
+  // Handle Login dengan Google OAuth via Supabase
   async function handleGoogleSignIn() {
-    setErrorMessage('Integrasi Google OAuth sedang dalam proses sinkronisasi kampus. Silakan masuk menggunakan Email & Kata Sandi.');
+    try {
+      setIsGoogleLoading(true);
+      setErrorMessage(null);
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        },
+      });
+      if (error) throw error;
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Gagal memulai login dengan Google.');
+      setIsGoogleLoading(false);
+    }
   }
 
   return (

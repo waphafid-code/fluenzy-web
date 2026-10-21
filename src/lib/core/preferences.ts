@@ -6,11 +6,13 @@ export type MascotChoice = 'boy' | 'girl' | 'lily' | 'arthur';
 export type LearningFocus = 'balanced' | 'grammar' | 'review' | 'vocab';
 export type AudioSpeedChoice = 0.8 | 0.95 | 1.1;
 export type EnglishAccentChoice = 'us' | 'uk' | 'au' | 'auto';
+export type VoiceGenderChoice = 'auto' | 'male' | 'female';
 
 export interface CompanionInfo {
   id: MascotChoice;
   name: string;
   role: string;
+  gender: 'male' | 'female';
   avatar: string;
   fullImage: string;
   quote: string;
@@ -20,10 +22,11 @@ export interface CompanionInfo {
 export const COMPANIONS: Record<MascotChoice, CompanionInfo> = {
   lily: {
     id: 'lily',
-    name: 'Lily (Lumi)',
+    name: 'Lily',
     role: 'AI Peer & Speaking Coach',
+    gender: 'female',
     avatar: '/mascot/lily_head_circle.png',
-    fullImage: '/mascot/lumi_solo.png',
+    fullImage: '/mascot/lingua_girl_waving.jpg',
     quote: 'Kamu pasti bisa! Sedikit demi sedikit, pasti bisa!',
     specialty: ['Home Roadmap', 'Speaking Drill', 'Live Peer Call'],
   },
@@ -31,26 +34,29 @@ export const COMPANIONS: Record<MascotChoice, CompanionInfo> = {
     id: 'arthur',
     name: 'Arthur',
     role: 'Tech Lead & Diagnostic Mentor',
+    gender: 'male',
     avatar: '/mascot/arthur_head_circle.png',
-    fullImage: '/mascot/arthur_character.png',
+    fullImage: '/mascot/lingua_boy_coffee.jpg',
     quote: 'Teknik yang tepat, membuatmu selangkah lebih maju.',
     specialty: ['Weekly Boss Battle', 'Diagnostic Tests', 'Grammar Surgery'],
   },
   boy: {
     id: 'boy',
-    name: 'Arthur',
+    name: 'Leo',
     role: 'Tech Lead & Diagnostic Mentor',
-    avatar: '/mascot/arthur_head_circle.png',
-    fullImage: '/mascot/arthur_character.png',
+    gender: 'male',
+    avatar: '/mascot/lingua_boy_coffee.jpg',
+    fullImage: '/mascot/lingua_boy_coffee.jpg',
     quote: 'Teknik yang tepat, membuatmu selangkah lebih maju.',
     specialty: ['Weekly Boss Battle', 'Diagnostic Tests', 'Grammar Surgery'],
   },
   girl: {
     id: 'girl',
-    name: 'Lily (Lumi)',
+    name: 'Maya & Lily',
     role: 'AI Peer & Speaking Coach',
-    avatar: '/mascot/lily_head_circle.png',
-    fullImage: '/mascot/lumi_solo.png',
+    gender: 'female',
+    avatar: '/mascot/lingua_girl_waving.jpg',
+    fullImage: '/mascot/lingua_girl_waving.jpg',
     quote: 'Kamu pasti bisa! Sedikit demi sedikit, pasti bisa!',
     specialty: ['Home Roadmap', 'Speaking Drill', 'Live Peer Call'],
   },
@@ -59,6 +65,8 @@ export const COMPANIONS: Record<MascotChoice, CompanionInfo> = {
 export function getCompanionInfo(choice: MascotChoice): CompanionInfo {
   return COMPANIONS[choice] || COMPANIONS.lily;
 }
+
+export type VoiceEngineProvider = 'browser-groq' | 'vibevoice';
 
 export interface UserPreferences {
   mascot: MascotChoice;
@@ -70,6 +78,10 @@ export interface UserPreferences {
   englishAccent: EnglishAccentChoice;
   customEnglishVoice: string; // 'auto' | exact name
   customIndonesianVoice: string; // 'auto' | exact name
+  voiceGender: VoiceGenderChoice; // 'auto' (mengikuti maskot) | 'male' | 'female'
+  voiceEngine: VoiceEngineProvider;
+  vibeVoiceEndpoint: string;
+  vibeVoiceApiKey: string;
 }
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
@@ -82,7 +94,23 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   englishAccent: 'auto',
   customEnglishVoice: 'auto',
   customIndonesianVoice: 'auto',
+  voiceGender: 'auto',
+  voiceEngine: 'browser-groq',
+  vibeVoiceEndpoint: '',
+  vibeVoiceApiKey: '',
 };
+
+/**
+ * Menentukan gender suara aktif: jika 'auto', disesuaikan dengan gender maskot (Arthur: male, Lily: female).
+ */
+export function getEffectiveVoiceGender(prefs?: UserPreferences): 'male' | 'female' {
+  const currentPrefs = prefs || getUserPreferences();
+  if (currentPrefs.voiceGender === 'male') return 'male';
+  if (currentPrefs.voiceGender === 'female') return 'female';
+  // Jika 'auto', ikuti gender maskot
+  const companion = getCompanionInfo(currentPrefs.mascot);
+  return companion.gender || 'male';
+}
 
 const STORAGE_KEY = 'fluenzy_user_preferences_v1';
 
