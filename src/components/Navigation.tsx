@@ -18,7 +18,7 @@ import {
   Settings,
 } from 'lucide-react';
 import { playBubblePop, speakText } from '@/lib/audio/speech';
-import { getUserPreferences, getCompanionInfo, MascotChoice } from '@/lib/core/preferences';
+import { getUserPreferences, getAcousticProfile, TargetAccent, VoiceTimbre } from '@/lib/core/preferences';
 import { PersonalizationModal } from '@/components/PersonalizationModal';
 
 export interface NavTabItem {
@@ -66,24 +66,29 @@ interface NavigationProps {
 
 export function Navigation({ activeTab }: NavigationProps) {
   const pathname = usePathname();
-  const [mascotChoice, setMascotChoice] = useState<MascotChoice>('lily');
+  const [targetAccent, setTargetAccent] = useState<TargetAccent>('en-US');
+  const [voiceTimbre, setVoiceTimbre] = useState<VoiceTimbre>('ember');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     const prefs = getUserPreferences();
-    setMascotChoice(prefs.mascot);
+    setTargetAccent(prefs.targetAccent);
+    setVoiceTimbre(prefs.voiceTimbre);
 
     const handlePrefChange = (e: Event) => {
       const customEvent = e as CustomEvent;
-      if (customEvent.detail?.mascot) {
-        setMascotChoice(customEvent.detail.mascot);
+      if (customEvent.detail?.targetAccent) {
+        setTargetAccent(customEvent.detail.targetAccent);
+      }
+      if (customEvent.detail?.voiceTimbre) {
+        setVoiceTimbre(customEvent.detail.voiceTimbre);
       }
     };
     window.addEventListener('fluenzy-preferences-updated', handlePrefChange);
     return () => window.removeEventListener('fluenzy-preferences-updated', handlePrefChange);
   }, []);
 
-  const companion = getCompanionInfo(mascotChoice);
+  const acoustic = getAcousticProfile(targetAccent, voiceTimbre);
 
   // Auto-detect current active tab from pathname if not explicitly passed
   const currentTab =
@@ -104,12 +109,14 @@ export function Navigation({ activeTab }: NavigationProps) {
     playBubblePop();
   }
 
-  function handleCompanionGreeting() {
+  function handleVoiceLabGreeting() {
     playBubblePop();
     const greeting =
-      companion.id === 'arthur' || companion.id === 'boy'
-        ? 'Kamu semakin dekat dengan tujuanmu. Tetap konsisten!'
-        : 'Ayo lanjutkan petualangan belajarmu hari ini!';
+      targetAccent === 'en-GB'
+        ? 'Splendid progress! Keep up the brilliant pronunciation practice.'
+        : targetAccent === 'en-AU'
+        ? 'Good on ya! Keep training your accent and rhythm today.'
+        : 'Awesome focus! You are getting closer to native fluency every day.';
     speakText(greeting, { emotion: 'encouraging' });
   }
 
@@ -187,29 +194,23 @@ export function Navigation({ activeTab }: NavigationProps) {
               <span className="tabular-nums">320</span>
             </div>
 
-            {/* Companion Dialogue / Avatar Button */}
+            {/* AI Acoustic Lab / Voice Coach Button */}
             <div className="flex items-center gap-2 pl-1 border-l border-[#1A2E40]">
               <button
                 type="button"
-                onClick={handleCompanionGreeting}
-                title={`Sapa ${companion.name} (${companion.role})`}
-                className="relative flex items-center gap-2 p-1 rounded-xl bg-[#142433] hover:bg-[#1A2F42] border border-[#1E374D] hover:border-emerald-500/40 transition group cursor-pointer"
+                onClick={handleVoiceLabGreeting}
+                title={`Fluenzy Voice Lab: ${acoustic.label} • ${acoustic.coachTitle}`}
+                className="relative flex items-center gap-2 p-1.5 rounded-xl bg-[#142433] hover:bg-[#1A2F42] border border-[#1E374D] hover:border-emerald-500/40 transition group cursor-pointer"
               >
-                <div className="relative h-7 w-7 rounded-lg overflow-hidden border border-emerald-400/40 bg-[#080E15]">
-                  <Image
-                    src={companion.avatar}
-                    alt={companion.name}
-                    width={28}
-                    height={28}
-                    className="object-cover"
-                  />
+                <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
+                  <span className="text-xs">🎙️</span>
                 </div>
                 <div className="hidden lg:flex flex-col text-left pr-1">
                   <span className="text-[11px] font-bold text-white group-hover:text-emerald-400 transition leading-tight">
-                    {companion.name.split(' ')[0]}
+                    {acoustic.targetAccent}
                   </span>
                   <span className="text-[9px] text-slate-400 leading-none">
-                    {companion.role.split('&')[0]}
+                    {acoustic.voiceTimbre}
                   </span>
                 </div>
               </button>
@@ -221,7 +222,7 @@ export function Navigation({ activeTab }: NavigationProps) {
                   playBubblePop();
                   setIsModalOpen(true);
                 }}
-                title="Pengaturan & Personalisasi Maskot"
+                title="Pengaturan Profil Akustik AI & Target Aksen"
                 className="p-1.5 rounded-xl bg-[#101C27] hover:bg-[#142433] border border-[#1A2E40] text-slate-400 hover:text-white transition cursor-pointer"
               >
                 <Settings className="h-4 w-4" />

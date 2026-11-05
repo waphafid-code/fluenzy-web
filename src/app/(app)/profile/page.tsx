@@ -25,12 +25,19 @@ import {
   Swords,
   Compass,
   RotateCcw,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { SignOutButton } from '@/components/auth/SignOutButton';
 import { PersonalizationModal } from '@/components/PersonalizationModal';
-import { getUserPreferences, getCompanionInfo, MascotChoice } from '@/lib/core/preferences';
+import { NeuralVoiceOrb } from '@/components/NeuralVoiceOrb';
+import {
+  getUserPreferences,
+  getAcousticProfile,
+  TargetAccent,
+  VoiceTimbre,
+} from '@/lib/core/preferences';
 import { playBubblePop, speakText } from '@/lib/audio/speech';
 import { createClient } from '@/lib/supabase/client';
 
@@ -54,7 +61,8 @@ export default function ProfilePage() {
   const router = useRouter();
   const supabase = createClient();
 
-  const [mascotChoice, setMascotChoice] = useState<MascotChoice>('lily');
+  const [targetAccent, setTargetAccent] = useState<TargetAccent>('en-US');
+  const [voiceTimbre, setVoiceTimbre] = useState<VoiceTimbre>('ember');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [userLevel, setUserLevel] = useState<string>('A1');
@@ -62,7 +70,8 @@ export default function ProfilePage() {
 
   useEffect(() => {
     const prefs = getUserPreferences();
-    setMascotChoice(prefs.mascot);
+    setTargetAccent(prefs.targetAccent);
+    setVoiceTimbre(prefs.voiceTimbre);
 
     async function loadData() {
       try {
@@ -98,15 +107,18 @@ export default function ProfilePage() {
 
     const handlePrefChange = (e: Event) => {
       const customEvent = e as CustomEvent;
-      if (customEvent.detail?.mascot) {
-        setMascotChoice(customEvent.detail.mascot);
+      if (customEvent.detail?.targetAccent) {
+        setTargetAccent(customEvent.detail.targetAccent);
+      }
+      if (customEvent.detail?.voiceTimbre) {
+        setVoiceTimbre(customEvent.detail.voiceTimbre);
       }
     };
     window.addEventListener('fluenzy-preferences-updated', handlePrefChange);
     return () => window.removeEventListener('fluenzy-preferences-updated', handlePrefChange);
   }, [supabase]);
 
-  const companion = getCompanionInfo(mascotChoice);
+  const acoustic = getAcousticProfile(targetAccent, voiceTimbre);
 
   const stats = profileData?.stats || {
     totalXp: 150,
@@ -139,22 +151,21 @@ export default function ProfilePage() {
           Profil Pembelajar
         </h1>
         <p className="text-xs sm:text-sm text-slate-400">
-          Kustomisasi maskot, dengarkan suara AI natural, dan pantau pencapaian liga Anda.
+          Atur profil akustik AI, target aksen penutur asli, dan pantau pencapaian liga Anda.
         </p>
       </div>
 
       {/* 2. PROFILE HERO CARD */}
       <Card className="border-[#1E374D] bg-[#0E1722] p-6 sm:p-8 relative overflow-hidden shadow-2xl">
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
-          {/* Mascot Companion Avatar with Glowing Ring */}
-          <div className="relative group shrink-0">
-            <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-3xl bg-gradient-to-br from-emerald-500/20 via-[#102231] to-[#0A1520] border-2 border-emerald-400/50 flex items-center justify-center shadow-[0_0_25px_rgba(0,229,117,0.25)] p-2">
-              <Image
-                src={companion.avatar}
-                alt={companion.name}
-                width={96}
-                height={96}
-                className="h-full w-full object-contain filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)]"
+          {/* Neural Voice Orb Companion with Ambient Glow */}
+          <div className="relative group shrink-0 flex flex-col items-center">
+            <div className="p-2 rounded-3xl bg-gradient-to-br from-emerald-500/10 via-[#102231] to-[#0A1520] border-2 border-emerald-400/40 shadow-[0_0_25px_rgba(0,229,117,0.2)]">
+              <NeuralVoiceOrb
+                state="idle"
+                size={96}
+                accentColor="#00E575"
+                voiceName={acoustic.label}
               />
             </div>
             <button
@@ -164,7 +175,7 @@ export default function ProfilePage() {
                 setIsModalOpen(true);
               }}
               className="absolute -bottom-2 -right-2 p-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold shadow-lg transition hover:scale-110 active:scale-95 cursor-pointer"
-              title="Ganti Karakter Maskot & Suara"
+              title="Kustomisasi Profil Akustik & Target Aksen"
             >
               <Sliders className="h-4 w-4" />
             </button>
@@ -177,7 +188,7 @@ export default function ProfilePage() {
                 Ruby League • Tier 1
               </span>
               <span className="px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 text-xs font-bold border border-cyan-500/40">
-                Maskot: {companion.name} ({companion.role})
+                AI Coach: {acoustic.coachTitle} ({acoustic.label})
               </span>
             </div>
 
@@ -200,7 +211,7 @@ export default function ProfilePage() {
                 className="flex items-center gap-2 border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/10 text-xs font-bold"
               >
                 <Sliders className="h-3.5 w-3.5" />
-                <span>Kustomisasi Maskot & Voice</span>
+                <span>Profil Akustik AI & Target Aksen</span>
               </Button>
 
               <SignOutButton />
@@ -330,7 +341,7 @@ export default function ProfilePage() {
       </Card>
 
       {/* 5. QUICK NAVIGATION SHORTCUTS */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Link
           href="/roadmap"
           className="p-4 rounded-2xl bg-[#0E1722] border border-[#1E374D] hover:border-emerald-400 transition group flex flex-col justify-between"
@@ -378,6 +389,23 @@ export default function ProfilePage() {
             </div>
             <p className="text-[11px] text-slate-400 leading-relaxed">
               Kaji ulang kata-kata yang sempat salah hingga tuntas.
+            </p>
+          </div>
+        </Link>
+
+        <Link
+          href="/research"
+          className="p-4 rounded-2xl bg-[#0E1722] border border-[#1E374D] hover:border-purple-400 transition group flex flex-col justify-between"
+        >
+          <div className="space-y-2">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-500/20 text-purple-400 font-bold">
+              <FileSpreadsheet className="h-5 w-5" />
+            </div>
+            <div className="text-xs font-black text-white group-hover:text-purple-300">
+              Evaluasi SUS & Riset
+            </div>
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              Kuesioner baku SUS (Brooke 1996) dan ekspor dataset TA.
             </p>
           </div>
         </Link>
