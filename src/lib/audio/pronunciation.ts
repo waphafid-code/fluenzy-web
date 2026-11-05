@@ -273,3 +273,67 @@ export function evaluatePronunciation(targetSentence: string, spokenSentence: st
     tips: tips.slice(0, 4),
   };
 }
+
+// -----------------------------------------------------------------------------
+// DETEKSI SUB-FONEM KRITIS PEMBELAJAR BAHASA INDONESIA
+// -----------------------------------------------------------------------------
+
+export interface PhonemeIssue {
+  targetWord: string;
+  recognizedWord: string;
+  expectedPhoneme: string;
+  detectedPhoneme: string;
+  description: string;
+  pedagogicalTip: string;
+}
+
+export function detectCriticalPhonemeIssues(
+  targetText: string,
+  recognizedText: string
+): PhonemeIssue[] {
+  const targetWords = targetText.toLowerCase().replace(/[.,!?;:]/g, '').split(/\s+/);
+  const recognizedWords = recognizedText.toLowerCase().replace(/[.,!?;:]/g, '').split(/\s+/);
+  const issues: PhonemeIssue[] = [];
+
+  for (let i = 0; i < targetWords.length; i++) {
+    const t = targetWords[i];
+    const r = recognizedWords[i] || '';
+    if (!t || !r || t === r) continue;
+
+    // 1. Voiceless dental fricative /θ/ -> /s/ or /t/ (think -> sink, throughput -> sroughput)
+    if (t.includes('th') && (r.startsWith('s') || r.startsWith('t'))) {
+      issues.push({
+        targetWord: t,
+        recognizedWord: r,
+        expectedPhoneme: '/θ/',
+        detectedPhoneme: r.startsWith('s') ? '/s/' : '/t/',
+        description: `Substitusi konsonan geser gigi /θ/ menjadi /${r[0]}/`,
+        pedagogicalTip: 'Posisikan ujung lidah sedikit di antara gigi seri atas dan bawah saat menghembuskan udara tanpa getaran pita suara.',
+      });
+    }
+    // 2. Voiced dental fricative /ð/ -> /d/ (this -> dis, the -> de, with -> wid)
+    else if ((t === 'this' || t === 'the' || t === 'that' || t === 'with') && (r.startsWith('d') || r.endsWith('d'))) {
+      issues.push({
+        targetWord: t,
+        recognizedWord: r,
+        expectedPhoneme: '/ð/',
+        detectedPhoneme: '/d/',
+        description: 'Substitusi konsonan dental bersuara /ð/ menjadi letupan /d/',
+        pedagogicalTip: 'Getarkan pita suara sambil menaruh lidah menyentuh tepi gigi seri atas, jangan ditarik ke langit-langit mulut.',
+      });
+    }
+    // 3. Labiodental fricative /v/ -> /f/ (very -> fery)
+    else if (t.includes('v') && r.includes('f')) {
+      issues.push({
+        targetWord: t,
+        recognizedWord: r,
+        expectedPhoneme: '/v/',
+        detectedPhoneme: '/f/',
+        description: 'Pelemahan getaran suara labiodental /v/ menjadi tak-bersuara /f/',
+        pedagogicalTip: 'Sentuhkan gigi atas ke bibir bawah sambil menyuarakan getaran vokal (voiced).',
+      });
+    }
+  }
+
+  return issues;
+}

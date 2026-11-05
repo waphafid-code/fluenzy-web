@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Navigation } from '@/components/Navigation';
 import { LottiePlayer } from '@/components/ui/LottiePlayer';
-import { getUserPreferences, getCompanionInfo } from '@/lib/core/preferences';
+import { getUserPreferences } from '@/lib/core/preferences';
 import {
   speakText,
   speakTurtleMode,
@@ -17,10 +17,13 @@ import {
 import {
   evaluatePronunciation,
   getPhoneticRepresentation,
+  detectCriticalPhonemeIssues,
   WordScore,
   PronunciationResult,
+  PhonemeIssue,
   PHONETIC_DICTIONARY,
 } from '@/lib/audio/pronunciation';
+import { AcousticSpectrogram } from '@/components/AcousticSpectrogram';
 import {
   Mic,
   MicOff,
@@ -133,18 +136,7 @@ export default function SpeakingPracticePage() {
   const recognitionRef = useRef<any>(null);
   const userAudioElementRef = useRef<HTMLAudioElement | null>(null);
 
-  // Companion Info
-  const [companion, setCompanion] = useState({
-    name: 'Arthur',
-    role: 'Tech Lead & Diagnostic Mentor',
-    avatar: '/mascot/arthur_head_circle.png',
-  });
-
   useEffect(() => {
-    const prefs = getUserPreferences();
-    const info = getCompanionInfo(prefs.mascot);
-    setCompanion(info);
-
     // Check Speech Recognition support in browser
     if (typeof window !== 'undefined') {
       const SpeechRec =
@@ -750,8 +742,18 @@ export default function SpeakingPracticePage() {
 
               {/* RECORDING / LIVE VISUALIZER CONSOLE */}
               <div className="p-5 rounded-2xl bg-[#070D14] border border-[#1E374D] flex flex-col items-center justify-center space-y-4">
+                {/* Acoustic Spectrogram & Frequency Canvas */}
+                <div className="w-full max-w-md">
+                  <AcousticSpectrogram
+                    isRecording={isRecording}
+                    analyserNode={analyserRef.current}
+                    height={56}
+                    accentColor="#00E575"
+                  />
+                </div>
+
                 {/* Waveform Frequency Bars (Powered by Web Audio AnalyserNode) */}
-                <div className="flex items-center justify-center gap-1.5 h-12 w-full max-w-sm">
+                <div className="flex items-center justify-center gap-1.5 h-8 w-full max-w-sm">
                   {waveBars.map((h, i) => (
                     <div
                       key={i}
@@ -986,6 +988,44 @@ export default function SpeakingPracticePage() {
                       ))}
                     </ul>
                   </div>
+
+                  {/* Critical Phoneme Focus */}
+                  {(() => {
+                    const criticalIssues = detectCriticalPhonemeIssues(
+                      activeSentence,
+                      liveTranscript || ''
+                    );
+                    if (criticalIssues.length === 0) return null;
+                    return (
+                      <div className="space-y-2 pt-2 border-t border-[#1E374D]">
+                        <span className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+                          <AlertCircle className="h-3.5 w-3.5 text-amber-400" />
+                          <span>Fokus Koreksi Fonem Kritis:</span>
+                        </span>
+                        <div className="space-y-2">
+                          {criticalIssues.map((issue, idx) => (
+                            <div
+                              key={idx}
+                              className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-xs space-y-1"
+                            >
+                              <div className="flex items-center justify-between font-bold text-white">
+                                <span>
+                                  Kata: &ldquo;{issue.targetWord}&rdquo; &rarr; &ldquo;{issue.recognizedWord}&rdquo;
+                                </span>
+                                <span className="font-mono text-amber-300">
+                                  Target: {issue.expectedPhoneme}
+                                </span>
+                              </div>
+                              <div className="text-[11px] text-slate-400">{issue.description}</div>
+                              <p className="text-[11px] text-amber-200/90 leading-relaxed italic">
+                                💡 {issue.pedagogicalTip}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               ) : (
                 <div className="text-center py-8 space-y-3">

@@ -3,6 +3,7 @@ import {
   evaluatePronunciation,
   calculateLevenshteinDistance,
   getPhoneticRepresentation,
+  detectCriticalPhonemeIssues,
   WordScore,
 } from '../pronunciation';
 
@@ -42,5 +43,18 @@ describe('ELSA-Style Pronunciation Evaluation Engine', () => {
     const ipa = getPhoneticRepresentation('architecture');
     expect(ipa).toBeDefined();
     expect(ipa.length).toBeGreaterThan(0);
+  });
+
+  it('mendeteksi substitusi fonem kritis umum pembelajar Indonesia (th -> s/t, v -> f)', () => {
+    const issues = detectCriticalPhonemeIssues('I think this approach is very good', 'I sink dis approach is fery good');
+    expect(issues.length).toBeGreaterThanOrEqual(2);
+
+    const thIssue = issues.find((i) => i.targetWord === 'think');
+    expect(thIssue).toBeDefined();
+    expect(thIssue?.expectedPhoneme).toBe('/θ/');
+
+    const vIssue = issues.find((i) => i.targetWord === 'very');
+    expect(vIssue).toBeDefined();
+    expect(vIssue?.expectedPhoneme).toBe('/v/');
   });
 });
