@@ -20,25 +20,15 @@ export interface CompanionInfo {
 }
 
 export const COMPANIONS: Record<MascotChoice, CompanionInfo> = {
-  lily: {
-    id: 'lily',
-    name: 'Lily',
-    role: 'AI Peer & Speaking Coach',
-    gender: 'female',
-    avatar: '/mascot/lily_head_circle.png',
-    fullImage: '/mascot/lingua_girl_waving.jpg',
-    quote: 'Kamu pasti bisa! Sedikit demi sedikit, pasti bisa!',
-    specialty: ['Home Roadmap', 'Speaking Drill', 'Live Peer Call'],
-  },
   arthur: {
     id: 'arthur',
-    name: 'Arthur',
+    name: 'Arthur (Coach Leo)',
     role: 'Tech Lead & Diagnostic Mentor',
     gender: 'male',
     avatar: '/mascot/arthur_head_circle.png',
     fullImage: '/mascot/lingua_boy_coffee.jpg',
     quote: 'Teknik yang tepat, membuatmu selangkah lebih maju.',
-    specialty: ['Weekly Boss Battle', 'Diagnostic Tests', 'Grammar Surgery'],
+    specialty: ['Technical Presentation', 'Diagnostic Tests', 'Grammar Surgery'],
   },
   boy: {
     id: 'boy',
@@ -48,25 +38,52 @@ export const COMPANIONS: Record<MascotChoice, CompanionInfo> = {
     avatar: '/mascot/lingua_boy_coffee.jpg',
     fullImage: '/mascot/lingua_boy_coffee.jpg',
     quote: 'Teknik yang tepat, membuatmu selangkah lebih maju.',
-    specialty: ['Weekly Boss Battle', 'Diagnostic Tests', 'Grammar Surgery'],
+    specialty: ['Technical Presentation', 'Diagnostic Tests', 'Grammar Surgery'],
+  },
+  lily: {
+    id: 'arthur',
+    name: 'Arthur (Coach Leo)',
+    role: 'Tech Lead & Diagnostic Mentor',
+    gender: 'male',
+    avatar: '/mascot/arthur_head_circle.png',
+    fullImage: '/mascot/lingua_boy_coffee.jpg',
+    quote: 'Teknik yang tepat, membuatmu selangkah lebih maju.',
+    specialty: ['Technical Presentation', 'Diagnostic Tests', 'Grammar Surgery'],
   },
   girl: {
-    id: 'girl',
-    name: 'Maya & Lily',
-    role: 'AI Peer & Speaking Coach',
-    gender: 'female',
-    avatar: '/mascot/lingua_girl_waving.jpg',
-    fullImage: '/mascot/lingua_girl_waving.jpg',
-    quote: 'Kamu pasti bisa! Sedikit demi sedikit, pasti bisa!',
-    specialty: ['Home Roadmap', 'Speaking Drill', 'Live Peer Call'],
+    id: 'boy',
+    name: 'Leo',
+    role: 'Tech Lead & Diagnostic Mentor',
+    gender: 'male',
+    avatar: '/mascot/lingua_boy_coffee.jpg',
+    fullImage: '/mascot/lingua_boy_coffee.jpg',
+    quote: 'Teknik yang tepat, membuatmu selangkah lebih maju.',
+    specialty: ['Technical Presentation', 'Diagnostic Tests', 'Grammar Surgery'],
   },
 };
 
 export function getCompanionInfo(choice: MascotChoice): CompanionInfo {
-  return COMPANIONS[choice] || COMPANIONS.lily;
+  return COMPANIONS[choice] || COMPANIONS.arthur;
 }
 
 export type VoiceEngineProvider = 'browser-groq' | 'vibevoice';
+
+export interface AcousticVoiceProfile {
+  targetAccent: EnglishAccentChoice;
+  voiceGender: VoiceGenderChoice;
+  audioSpeed: AudioSpeedChoice;
+  voiceEngine: VoiceEngineProvider;
+}
+
+export function getAcousticProfile(prefs?: UserPreferences): AcousticVoiceProfile {
+  const p = prefs || getUserPreferences();
+  return {
+    targetAccent: p.englishAccent,
+    voiceGender: p.voiceGender,
+    audioSpeed: p.audioSpeed,
+    voiceEngine: p.voiceEngine,
+  };
+}
 
 export interface UserPreferences {
   mascot: MascotChoice;
@@ -104,12 +121,12 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
  * Menentukan gender suara aktif: jika 'auto', disesuaikan dengan gender maskot (Arthur: male, Lily: female).
  */
 export function getEffectiveVoiceGender(prefs?: UserPreferences): 'male' | 'female' {
-  const currentPrefs = prefs || getUserPreferences();
-  if (currentPrefs.voiceGender === 'male') return 'male';
-  if (currentPrefs.voiceGender === 'female') return 'female';
-  // Jika 'auto', ikuti gender maskot
-  const companion = getCompanionInfo(currentPrefs.mascot);
-  return companion.gender || 'male';
+  const p = prefs || getUserPreferences();
+  if (p.voiceGender === 'male' || p.voiceGender === 'female') {
+    return p.voiceGender;
+  }
+  // Default for Coach Leo / Arthur: male natural timbre
+  return 'male';
 }
 
 const STORAGE_KEY = 'fluenzy_user_preferences_v1';

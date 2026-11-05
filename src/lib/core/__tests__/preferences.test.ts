@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
-  DEFAULT_PREFERENCES,
   getUserPreferences,
   saveUserPreferences,
   calculateDailyGoalProgress,
   getEffectiveVoiceGender,
+  getAcousticProfile,
 } from '../preferences';
 
 describe('User Preferences & Personalization Engine', () => {
@@ -62,16 +62,30 @@ describe('User Preferences & Personalization Engine', () => {
     expect(getUserPreferences().mascot).toBe('boy');
     expect(getUserPreferences().voiceGender).toBe('auto');
 
-    // Lily / girl -> female
-    saveUserPreferences({ mascot: 'lily', voiceGender: 'auto' });
-    expect(getEffectiveVoiceGender()).toBe('female');
+    // Arthur / Leo -> male
+    saveUserPreferences({ mascot: 'boy', voiceGender: 'auto' });
+    expect(getEffectiveVoiceGender()).toBe('male');
 
-    // Arthur / boy -> male
     saveUserPreferences({ mascot: 'arthur', voiceGender: 'auto' });
     expect(getEffectiveVoiceGender()).toBe('male');
 
     // Manual override to female despite male mascot
     saveUserPreferences({ mascot: 'arthur', voiceGender: 'female' });
     expect(getEffectiveVoiceGender()).toBe('female');
+  });
+
+  it('mengambil profil akustik AI murni dengan konfigurasi aksen dan kecepatan', () => {
+    saveUserPreferences({
+      englishAccent: 'uk',
+      voiceGender: 'male',
+      audioSpeed: 0.95,
+      voiceEngine: 'browser-groq',
+    });
+
+    const acoustic = getAcousticProfile();
+    expect(acoustic.targetAccent).toBe('uk');
+    expect(acoustic.voiceGender).toBe('male');
+    expect(acoustic.audioSpeed).toBe(0.95);
+    expect(acoustic.voiceEngine).toBe('browser-groq');
   });
 });
