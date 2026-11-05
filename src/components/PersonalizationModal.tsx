@@ -231,82 +231,57 @@ export function PersonalizationModal({
           </button>
         </div>
 
-        {/* 1. SELEKSI MASKOT & KARAKTER AI */}
+        {/* 1. TARGET AKSEN & PROFIL AKUSTIK AI */}
         <div className="space-y-3">
           <label className="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-2">
             <Compass className="h-4 w-4 text-emerald-400" />
-            Pilih AI Peer & Coach Utama
+            Target Aksen Bahasa Inggris & Standar Fonetik
           </label>
-          <div className="grid grid-cols-2 gap-3">
-            {/* Lily */}
-            <button
-              type="button"
-              onClick={() => {
-                updateField('mascot', 'lily');
-                speakText(COMPANIONS.lily.quote, { gender: 'female' });
-              }}
-              className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center text-center gap-2.5 cursor-pointer ${
-                prefs.mascot === 'lily' || prefs.mascot === 'girl'
-                  ? 'border-emerald-400 bg-emerald-500/10 shadow-[0_0_20px_rgba(0,229,117,0.2)]'
-                  : 'border-[#1A2E40] hover:border-slate-600 bg-[#142433]'
-              }`}
-            >
-              <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-b from-emerald-950/60 to-cyan-950/40 border border-emerald-500/30 flex items-center justify-center overflow-hidden">
-                <Image
-                  src="/mascot/lily_head_circle.png"
-                  alt="Lily"
-                  width={64}
-                  height={64}
-                  className="object-cover"
-                />
-              </div>
-              <div>
-                <div className="font-black text-sm text-white flex items-center justify-center gap-1.5">
-                  Lily (Lumi)
-                  {(prefs.mascot === 'lily' || prefs.mascot === 'girl') && (
-                    <Check className="h-4 w-4 text-emerald-400" />
-                  )}
-                </div>
-                <div className="text-[11px] font-bold text-emerald-400 mt-0.5">
-                  Karakter Cewek • AI Peer Coach
-                </div>
-              </div>
-            </button>
-
-            {/* Arthur */}
-            <button
-              type="button"
-              onClick={() => {
-                updateField('mascot', 'arthur');
-                speakText(COMPANIONS.arthur.quote, { gender: 'male' });
-              }}
-              className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center text-center gap-2.5 cursor-pointer ${
-                prefs.mascot === 'arthur' || prefs.mascot === 'boy'
-                  ? 'border-cyan-400 bg-cyan-500/10 shadow-[0_0_20px_rgba(0,210,255,0.2)]'
-                  : 'border-[#1A2E40] hover:border-slate-600 bg-[#142433]'
-              }`}
-            >
-              <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-b from-cyan-950/60 to-blue-950/40 border border-cyan-500/30 flex items-center justify-center overflow-hidden">
-                <Image
-                  src="/mascot/arthur_head_circle.png"
-                  alt="Arthur"
-                  width={64}
-                  height={64}
-                  className="object-cover"
-                />
-              </div>
-              <div>
-                <div className="font-black text-sm text-white flex items-center justify-center gap-1.5">
-                  Arthur
-                  {(prefs.mascot === 'arthur' || prefs.mascot === 'boy') && (
-                    <Check className="h-4 w-4 text-cyan-400" />
-                  )}
-                </div>
-                <div className="text-[11px] font-bold text-cyan-400 mt-0.5">
-                  Karakter Cowok • Tech Lead Mentor
-                </div>
-              </div>
-            </button>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            {[
+              {
+                id: 'us' as EnglishAccentChoice,
+                flag: '🇺🇸',
+                title: 'American (US)',
+                desc: 'General American • Standar Industri & Tech',
+              },
+              {
+                id: 'uk' as EnglishAccentChoice,
+                flag: '🇬🇧',
+                title: 'British (UK)',
+                desc: 'Received Pronunciation • Standar IELTS & Akademik',
+              },
+              {
+                id: 'au' as EnglishAccentChoice,
+                flag: '🇦🇺',
+                title: 'Australian (AU)',
+                desc: 'Australian English • Percakapan Luwes & Ramah',
+              },
+            ].map((item) => {
+              const isSelected = prefs.englishAccent === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => {
+                    updateField('englishAccent', item.id);
+                    handleTestEnglishVoice();
+                  }}
+                  className={`p-3.5 rounded-2xl border text-left transition flex flex-col justify-between cursor-pointer ${
+                    isSelected
+                      ? 'border-cyan-400 bg-cyan-500/20 text-white shadow-[0_0_15px_rgba(0,210,255,0.25)]'
+                      : 'border-[#1A2E40] bg-[#101C27] text-slate-400 hover:border-slate-500'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xl">{item.flag}</span>
+                    {isSelected && <Check className="h-4 w-4 text-cyan-400" />}
+                  </div>
+                  <div className="mt-2 font-black text-xs text-white">{item.title}</div>
+                  <div className="text-[10px] text-slate-400 mt-0.5 leading-snug">{item.desc}</div>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -330,19 +305,19 @@ export function PersonalizationModal({
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               {[
                 {
-                  id: 'auto' as VoiceGenderChoice,
-                  label: 'Sesuai Maskot (Otomatis)',
-                  desc: 'Arthur: Suara Cowok, Lily: Suara Cewek',
-                },
-                {
                   id: 'male' as VoiceGenderChoice,
                   label: 'Suara Pria (Male)',
-                  desc: 'Karakter suara cowok yang berwibawa & natural',
+                  desc: 'Karakter suara berwibawa & natural',
                 },
                 {
                   id: 'female' as VoiceGenderChoice,
                   label: 'Suara Wanita (Female)',
-                  desc: 'Karakter suara cewek yang hangat & artikulatif',
+                  desc: 'Karakter suara ramah & artikulatif',
+                },
+                {
+                  id: 'auto' as VoiceGenderChoice,
+                  label: 'Otomatis (System)',
+                  desc: 'Mengikuti suara native terbaik perangkat',
                 },
               ].map((item) => (
                 <button
@@ -350,17 +325,9 @@ export function PersonalizationModal({
                   type="button"
                   onClick={() => {
                     updateField('voiceGender', item.id);
-                    const effective =
-                      item.id === 'auto'
-                        ? prefs.mascot === 'girl' || prefs.mascot === 'lily'
-                          ? 'female'
-                          : 'male'
-                        : item.id;
-                    const sample =
-                      effective === 'male'
-                        ? 'Hello! This is the male English coach voice.'
-                        : 'Hello! This is the female English coach voice.';
-                    speakText(sample, { gender: effective });
+                    speakText('Hello! This is Fluenzy AI, your English pronunciation coach.', {
+                      gender: item.id === 'female' ? 'female' : 'male',
+                    });
                   }}
                   className={`p-3 rounded-xl border text-xs font-bold transition flex flex-col justify-between text-left cursor-pointer ${
                     prefs.voiceGender === item.id
@@ -368,13 +335,13 @@ export function PersonalizationModal({
                       : 'border-[#1A2E40] bg-[#101C27] text-slate-400 hover:border-slate-500'
                   }`}
                 >
-                  <div className="flex items-center justify-between w-full">
-                    <span className="text-white font-black">{item.label}</span>
-                    {prefs.voiceGender === item.id && (
-                      <Check className="h-4 w-4 text-cyan-400 shrink-0" />
+                  <span className="flex items-center justify-between">
+                    {item.label}
+                    {(prefs.voiceGender === item.id || (item.id === 'auto' && (prefs.voiceGender as string) === 'male')) && (
+                      <Check className="h-4 w-4 text-cyan-400" />
                     )}
-                  </div>
-                  <span className="text-[10px] font-normal text-slate-400 mt-1 leading-relaxed">
+                  </span>
+                  <span className="text-[10px] text-slate-400 mt-1 font-normal">
                     {item.desc}
                   </span>
                 </button>
@@ -400,8 +367,8 @@ export function PersonalizationModal({
                 <div className="flex items-center gap-2">
                   <Cpu className="h-4 w-4 text-cyan-400" />
                   <div className="text-left">
-                    <div className="text-white">Standar (Browser Neural TTS)</div>
-                    <div className="text-[10px] font-normal text-slate-400">Instan, bebas kuota, & hemat memori</div>
+                    <div className="text-white">Cloud Neural (Fish Audio S2.1 Pro)</div>
+                    <div className="text-[10px] font-normal text-slate-400">OpenRouter AI studio voice, ultra jernih</div>
                   </div>
                 </div>
                 {prefs.voiceEngine === 'browser-groq' && <Check className="h-4 w-4 text-cyan-400" />}

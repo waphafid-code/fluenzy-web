@@ -1003,21 +1003,15 @@ export default function SpeakingPracticePage() {
               )}
             </div>
 
-            {/* COMPANION MENTOR FEEDBACK CARD */}
+            {/* AI ACOUSTIC MENTOR FEEDBACK CARD */}
             <div className="card-cyber p-5 space-y-4 border-cyan-500/30">
               <div className="flex items-center gap-3">
-                <div className="relative h-12 w-12 rounded-full overflow-hidden border-2 border-cyan-400/80 shadow-[0_0_12px_rgba(0,210,255,0.4)]">
-                  <Image
-                    src={companion.avatar}
-                    alt={companion.name}
-                    width={48}
-                    height={48}
-                    className="object-cover"
-                  />
+                <div className="relative h-12 w-12 rounded-2xl bg-gradient-to-tr from-cyan-500/20 to-emerald-500/20 border-2 border-cyan-400/60 shadow-[0_0_15px_rgba(0,210,255,0.25)] flex items-center justify-center shrink-0 text-cyan-400">
+                  <Activity className="h-6 w-6 stroke-[2.2]" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-black text-white">{companion.name}</h3>
-                  <p className="text-[11px] text-cyan-400 font-mono">{companion.role}</p>
+                  <h3 className="text-sm font-black text-white">Fluenzy AI Voice Lab</h3>
+                  <p className="text-[11px] text-cyan-400 font-mono">Acoustic & Phonetic Coach</p>
                 </div>
               </div>
 
@@ -1036,8 +1030,8 @@ export default function SpeakingPracticePage() {
                   )
                 ) : (
                   <span>
-                    &ldquo;Halo! Saya {companion.name}. Di lab ini, kita akan melatih otot mulut untuk
-                    melafalkan kata teknis bahasa Inggris dengan percaya diri. Ayo coba rekam!&rdquo;
+                    &ldquo;Selamat datang di Fluenzy AI Voice Lab! Di lab ini, kita akan melatih otot mulut untuk
+                    melafalkan kata teknis bahasa Inggris dengan artikulasi presisi. Ayo coba rekam!&rdquo;
                   </span>
                 )}
               </div>
