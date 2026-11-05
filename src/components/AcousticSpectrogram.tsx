@@ -38,7 +38,7 @@ export function AcousticSpectrogram({
       let dataArray: Uint8Array | null = null;
       if (analyserNode) {
         dataArray = new Uint8Array(analyserNode.frequencyBinCount);
-        analyserNode.getByteFrequencyData(dataArray);
+        analyserNode.getByteFrequencyData(dataArray as any);
       }
 
       for (let i = 0; i < barCount; i++) {
@@ -91,3 +91,4 @@ export function AcousticSpectrogram({
     </div>
   );
 }
+

@@ -35,8 +35,8 @@ import { NeuralVoiceOrb } from '@/components/NeuralVoiceOrb';
 import {
   getUserPreferences,
   getAcousticProfile,
-  TargetAccent,
-  VoiceTimbre,
+  EnglishAccentChoice,
+  VoiceGenderChoice,
 } from '@/lib/core/preferences';
 import { playBubblePop, speakText } from '@/lib/audio/speech';
 import { createClient } from '@/lib/supabase/client';
@@ -61,8 +61,8 @@ export default function ProfilePage() {
   const router = useRouter();
   const supabase = createClient();
 
-  const [targetAccent, setTargetAccent] = useState<TargetAccent>('en-US');
-  const [voiceTimbre, setVoiceTimbre] = useState<VoiceTimbre>('ember');
+  const [englishAccent, setEnglishAccent] = useState<EnglishAccentChoice>('us');
+  const [voiceGender, setVoiceGender] = useState<VoiceGenderChoice>('auto');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [userLevel, setUserLevel] = useState<string>('A1');
@@ -70,8 +70,8 @@ export default function ProfilePage() {
 
   useEffect(() => {
     const prefs = getUserPreferences();
-    setTargetAccent(prefs.targetAccent);
-    setVoiceTimbre(prefs.voiceTimbre);
+    setEnglishAccent(prefs.englishAccent);
+    setVoiceGender(prefs.voiceGender);
 
     async function loadData() {
       try {
@@ -107,18 +107,30 @@ export default function ProfilePage() {
 
     const handlePrefChange = (e: Event) => {
       const customEvent = e as CustomEvent;
-      if (customEvent.detail?.targetAccent) {
-        setTargetAccent(customEvent.detail.targetAccent);
+      if (customEvent.detail?.englishAccent) {
+        setEnglishAccent(customEvent.detail.englishAccent);
       }
-      if (customEvent.detail?.voiceTimbre) {
-        setVoiceTimbre(customEvent.detail.voiceTimbre);
+      if (customEvent.detail?.voiceGender) {
+        setVoiceGender(customEvent.detail.voiceGender);
       }
     };
     window.addEventListener('fluenzy-preferences-updated', handlePrefChange);
     return () => window.removeEventListener('fluenzy-preferences-updated', handlePrefChange);
   }, [supabase]);
 
-  const acoustic = getAcousticProfile(targetAccent, voiceTimbre);
+  const acoustic = getAcousticProfile();
+  const accentLabel =
+    englishAccent === 'uk'
+      ? 'British English (en-GB)'
+      : englishAccent === 'au'
+      ? 'Australian English (en-AU)'
+      : 'American English (en-US)';
+  const timbreLabel =
+    voiceGender === 'female'
+      ? 'Breeze Voice (Female)'
+      : voiceGender === 'male'
+      ? 'Ember Voice (Male)'
+      : 'Auto Adaptive';
 
   const stats = profileData?.stats || {
     totalXp: 150,
@@ -165,7 +177,7 @@ export default function ProfilePage() {
                 state="idle"
                 size={96}
                 accentColor="#00E575"
-                voiceName={acoustic.label}
+                showStatusBadge={false}
               />
             </div>
             <button
@@ -188,7 +200,7 @@ export default function ProfilePage() {
                 Ruby League • Tier 1
               </span>
               <span className="px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 text-xs font-bold border border-cyan-500/40">
-                AI Coach: {acoustic.coachTitle} ({acoustic.label})
+                AI Coach: {accentLabel} • {timbreLabel}
               </span>
             </div>
 
@@ -414,6 +426,10 @@ export default function ProfilePage() {
       <PersonalizationModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
+        onPreferencesChanged={(newPrefs) => {
+          setEnglishAccent(newPrefs.englishAccent);
+          setVoiceGender(newPrefs.voiceGender);
+        }}
       />
     </div>
   );

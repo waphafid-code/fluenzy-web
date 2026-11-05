@@ -18,7 +18,12 @@ import {
   Settings,
 } from 'lucide-react';
 import { playBubblePop, speakText } from '@/lib/audio/speech';
-import { getUserPreferences, getAcousticProfile, TargetAccent, VoiceTimbre } from '@/lib/core/preferences';
+import {
+  getUserPreferences,
+  getAcousticProfile,
+  EnglishAccentChoice,
+  VoiceGenderChoice,
+} from '@/lib/core/preferences';
 import { PersonalizationModal } from '@/components/PersonalizationModal';
 
 export interface NavTabItem {
@@ -66,29 +71,35 @@ interface NavigationProps {
 
 export function Navigation({ activeTab }: NavigationProps) {
   const pathname = usePathname();
-  const [targetAccent, setTargetAccent] = useState<TargetAccent>('en-US');
-  const [voiceTimbre, setVoiceTimbre] = useState<VoiceTimbre>('ember');
+  const [englishAccent, setEnglishAccent] = useState<EnglishAccentChoice>('us');
+  const [voiceGender, setVoiceGender] = useState<VoiceGenderChoice>('auto');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     const prefs = getUserPreferences();
-    setTargetAccent(prefs.targetAccent);
-    setVoiceTimbre(prefs.voiceTimbre);
+    setEnglishAccent(prefs.englishAccent);
+    setVoiceGender(prefs.voiceGender);
 
     const handlePrefChange = (e: Event) => {
       const customEvent = e as CustomEvent;
-      if (customEvent.detail?.targetAccent) {
-        setTargetAccent(customEvent.detail.targetAccent);
+      if (customEvent.detail?.englishAccent) {
+        setEnglishAccent(customEvent.detail.englishAccent);
       }
-      if (customEvent.detail?.voiceTimbre) {
-        setVoiceTimbre(customEvent.detail.voiceTimbre);
+      if (customEvent.detail?.voiceGender) {
+        setVoiceGender(customEvent.detail.voiceGender);
       }
     };
     window.addEventListener('fluenzy-preferences-updated', handlePrefChange);
     return () => window.removeEventListener('fluenzy-preferences-updated', handlePrefChange);
   }, []);
 
-  const acoustic = getAcousticProfile(targetAccent, voiceTimbre);
+  const acoustic = getAcousticProfile();
+  const accentLabel =
+    englishAccent === 'uk'
+      ? 'en-GB'
+      : englishAccent === 'au'
+      ? 'en-AU'
+      : 'en-US';
 
   // Auto-detect current active tab from pathname if not explicitly passed
   const currentTab =
@@ -112,9 +123,9 @@ export function Navigation({ activeTab }: NavigationProps) {
   function handleVoiceLabGreeting() {
     playBubblePop();
     const greeting =
-      targetAccent === 'en-GB'
+      englishAccent === 'uk'
         ? 'Splendid progress! Keep up the brilliant pronunciation practice.'
-        : targetAccent === 'en-AU'
+        : englishAccent === 'au'
         ? 'Good on ya! Keep training your accent and rhythm today.'
         : 'Awesome focus! You are getting closer to native fluency every day.';
     speakText(greeting, { emotion: 'encouraging' });
@@ -199,7 +210,7 @@ export function Navigation({ activeTab }: NavigationProps) {
               <button
                 type="button"
                 onClick={handleVoiceLabGreeting}
-                title={`Fluenzy Voice Lab: ${acoustic.label} • ${acoustic.coachTitle}`}
+                title={`Fluenzy Voice Lab: ${accentLabel} • ${acoustic.voiceGender}`}
                 className="relative flex items-center gap-2 p-1.5 rounded-xl bg-[#142433] hover:bg-[#1A2F42] border border-[#1E374D] hover:border-emerald-500/40 transition group cursor-pointer"
               >
                 <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
@@ -207,10 +218,10 @@ export function Navigation({ activeTab }: NavigationProps) {
                 </div>
                 <div className="hidden lg:flex flex-col text-left pr-1">
                   <span className="text-[11px] font-bold text-white group-hover:text-emerald-400 transition leading-tight">
-                    {acoustic.targetAccent}
+                    {accentLabel}
                   </span>
                   <span className="text-[9px] text-slate-400 leading-none">
-                    {acoustic.voiceTimbre}
+                    {acoustic.voiceGender}
                   </span>
                 </div>
               </button>
@@ -258,7 +269,10 @@ export function Navigation({ activeTab }: NavigationProps) {
       <PersonalizationModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onPreferencesChanged={(newPrefs) => setMascotChoice(newPrefs.mascot)}
+        onPreferencesChanged={(newPrefs) => {
+          setEnglishAccent(newPrefs.englishAccent);
+          setVoiceGender(newPrefs.voiceGender);
+        }}
       />
     </>
   );
