@@ -2,6 +2,7 @@ import React, { Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/server';
+import { NeuralVoiceOrb } from '@/components/NeuralVoiceOrb';
 import {
   Flame,
   Zap,
@@ -109,21 +110,14 @@ async function HomeContent() {
             </div>
           </div>
 
-          {/* Friendly Mascot Avatar on Right with Greeting */}
+          {/* AI Acoustic Lab Neural Voice Orb on Right */}
           <div className="hidden sm:flex flex-col items-center shrink-0 relative self-end md:self-center">
-            <div className="mb-2 px-3 py-1 rounded-2xl bg-white text-[#4338CA] text-xs font-black shadow-md border border-white/40 animate-bounce">
-              ¡Hola! ✨
-            </div>
-            <div className="relative h-28 w-28 rounded-3xl overflow-hidden border-2 border-white/30 shadow-2xl bg-white/10 backdrop-blur-sm group hover:scale-105 transition-transform duration-300">
-              <Image
-                src="/mascot/lingua_girl_waving.jpg"
-                alt="Fluenzy Mascot Mentor"
-                width={112}
-                height={112}
-                className="h-full w-full object-cover"
-                priority
-              />
-            </div>
+            <NeuralVoiceOrb
+              size={96}
+              state="idle"
+              accentColor="#38BDF8"
+              customLabel="AI Acoustic Lab"
+            />
           </div>
         </div>
       </div>
