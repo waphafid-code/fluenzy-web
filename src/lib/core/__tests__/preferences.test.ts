@@ -24,10 +24,27 @@ describe('User Preferences & Personalization Engine', () => {
 
   it('mengembalikan default preferences jika storage kosong', () => {
     const prefs = getUserPreferences();
+    expect(prefs.goal).toBe('career');
+    expect(prefs.proficiencyTier).toBe('A2');
     expect(prefs.mascot).toBe('boy');
     expect(prefs.dailyGoalXp).toBe(50);
     expect(prefs.audioSpeed).toBe(0.95);
     expect(prefs.learningFocus).toBe('balanced');
+  });
+
+  it('menyimpan dan memperbarui preferensi tujuan dan tingkatan pemahaman', () => {
+    const updated = saveUserPreferences({
+      goal: 'travel',
+      proficiencyTier: 'A1',
+      dailyGoalXp: 100,
+    });
+    expect(updated.goal).toBe('travel');
+    expect(updated.proficiencyTier).toBe('A1');
+    expect(updated.dailyGoalXp).toBe(100);
+
+    const loaded = getUserPreferences();
+    expect(loaded.goal).toBe('travel');
+    expect(loaded.proficiencyTier).toBe('A1');
   });
 
   it('menyimpan dan memperbarui preferensi maskot dan target belajar', () => {

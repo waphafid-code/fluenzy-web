@@ -13,6 +13,7 @@ interface NeuralVoiceOrbProps {
   showStatusBadge?: boolean;
   customLabel?: string;
   className?: string;
+  voiceName?: string;
 }
 
 export function NeuralVoiceOrb({
@@ -23,6 +24,7 @@ export function NeuralVoiceOrb({
   showStatusBadge = true,
   customLabel,
   className = '',
+  voiceName,
 }: NeuralVoiceOrbProps) {
   // Determine effective color & labels
   const isListening = state === 'listening';
@@ -184,3 +186,4 @@ export function NeuralVoiceOrb({
     </div>
   );
 }
+

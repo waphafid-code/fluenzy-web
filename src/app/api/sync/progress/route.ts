@@ -1,21 +1,46 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
+import { checkRateLimit, getClientIp } from '@/lib/server/rateLimiter';
 
 export async function POST(request: Request) {
+  // 1. Rate Limiter Guard (60 syncs/min per IP)
+  const clientIp = getClientIp(request);
+  const rateLimit = checkRateLimit(clientIp, 60, 60000);
+  if (!rateLimit.isAllowed) {
+    return NextResponse.json(
+      { success: false, error: 'Rate limit exceeded for progress sync. Please wait.' },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(rateLimit.retryAfterSec),
+          'X-RateLimit-Limit': String(rateLimit.limit),
+          'X-RateLimit-Remaining': String(rateLimit.remaining),
+        },
+      }
+    );
+  }
+
+  let body: any;
   try {
-    const body = await request.json();
-    const {
-      userId,
-      email = 'budi@fluenzy.id',
-      xp = 0,
-      streak = 0,
-      gems = 0,
-      hearts = 5,
-      targetAccent = 'us',
-      voiceGender = 'male',
-      audioSpeed = 0.95,
-      timestamp,
-    } = body;
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ success: false, error: 'Invalid JSON payload' }, { status: 400 });
+  }
+
+  try {
+    const rawEmail = typeof body.email === 'string' ? body.email.trim() : 'budi@fluenzy.id';
+    const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawEmail) ? rawEmail : 'budi@fluenzy.id';
+
+    // Bounding & type coercion untuk proteksi boundary whitebox
+    const xp = Math.max(0, Math.min(1000000, Math.round(Number(body.xp) || 0)));
+    const streak = Math.max(0, Math.min(10000, Math.round(Number(body.streak) || 0)));
+    const gems = Math.max(0, Math.min(500000, Math.round(Number(body.gems) || 0)));
+    const hearts = Math.max(0, Math.min(5, Math.round(Number(body.hearts ?? 5))));
+    const audioSpeed = Math.max(0.5, Math.min(2.0, Number(body.audioSpeed) || 0.95));
+    const targetAccent = ['us', 'uk', 'au'].includes(body.targetAccent) ? body.targetAccent : 'us';
+    const voiceGender = ['male', 'female'].includes(body.voiceGender) ? body.voiceGender : 'male';
+    const userId = typeof body.userId === 'string' && body.userId.trim() ? body.userId.trim() : undefined;
+    const timestamp = body.timestamp;
 
     // 1. Temukan atau buat user
     let user = await prisma.user.findFirst({
@@ -115,3 +140,4 @@ export async function GET(request: Request) {
     );
   }
 }
+

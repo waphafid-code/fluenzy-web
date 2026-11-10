@@ -28,16 +28,12 @@ export function LottiePlayer({
 }: LottiePlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<AnimationItem | null>(null);
-  const [data, setData] = useState<object | null>(animationData || null);
+  const [fetchedData, setFetchedData] = useState<object | null>(null);
+  const data = animationData || fetchedData;
 
   // If path is provided, fetch JSON safely on client
   useEffect(() => {
-    if (animationData) {
-      setData(animationData);
-      return;
-    }
-
-    if (!animationPath) return;
+    if (animationData || !animationPath) return;
 
     let isMounted = true;
     fetch(animationPath)
@@ -46,7 +42,7 @@ export function LottiePlayer({
         return res.json();
       })
       .then((json) => {
-        if (isMounted) setData(json);
+        if (isMounted) setFetchedData(json);
       })
       .catch((err) => {
         console.warn('[LottiePlayer] Error loading animation:', err);

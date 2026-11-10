@@ -23,6 +23,7 @@ export function LottieToggle({
   const containerRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<AnimationItem | null>(null);
   const isFirstRender = useRef(true);
+  const initialCheckedRef = useRef(checked);
 
   useEffect(() => {
     let isMounted = true;
@@ -49,7 +50,7 @@ export function LottieToggle({
       anim.addEventListener('DOMLoaded', () => {
         if (!isMounted) return;
         // On initial load, jump directly to the target state without transition
-        anim.goToAndStop(checked ? 180 : 60, true);
+        anim.goToAndStop(initialCheckedRef.current ? 180 : 60, true);
         isFirstRender.current = false;
       });
 

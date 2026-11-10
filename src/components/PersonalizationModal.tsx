@@ -14,6 +14,8 @@ import {
   Compass,
   Server,
   Cpu,
+  BookOpen,
+  Award,
 } from 'lucide-react';
 import {
   getUserPreferences,
@@ -25,6 +27,10 @@ import {
   VoiceGenderChoice,
   VoiceEngineProvider,
   COMPANIONS,
+  UserLearningGoal,
+  UserProficiencyTier,
+  LEARNING_GOALS,
+  PROFICIENCY_TIERS,
 } from '@/lib/core/preferences';
 import { LottieToggle } from '@/components/ui/LottieToggle';
 import {
@@ -126,21 +132,21 @@ export function PersonalizationModal({
       const blob = await res.blob();
       const audioUrl = URL.createObjectURL(blob);
       const audio = new Audio(audioUrl);
-      setVibeVoiceStatus('✅ Terhubung! Memutar suara VibeVoice...');
+      setVibeVoiceStatus('Terhubung: Memutar suara VibeVoice...');
       audio.onended = () => {
         URL.revokeObjectURL(audioUrl);
         setVibeVoiceTesting(false);
-        setVibeVoiceStatus('✅ Sukses! VibeVoice aktif dan siap digunakan.');
+        setVibeVoiceStatus('Sukses: VibeVoice aktif dan siap digunakan.');
       };
       audio.onerror = () => {
         URL.revokeObjectURL(audioUrl);
         setVibeVoiceTesting(false);
-        setVibeVoiceStatus('⚠️ Audio diterima namun gagal diputar.');
+        setVibeVoiceStatus('Peringatan: Audio diterima namun gagal diputar.');
       };
       await audio.play();
     } catch (e) {
       setVibeVoiceTesting(false);
-      setVibeVoiceStatus(`❌ Gagal: ${e instanceof Error ? e.message : 'Koneksi ditolak'}`);
+      setVibeVoiceStatus(`Gagal: ${e instanceof Error ? e.message : 'Koneksi ditolak'}`);
     }
   }
 
@@ -229,6 +235,99 @@ export function PersonalizationModal({
           >
             <X className="h-5 w-5" />
           </button>
+        </div>
+
+        {/* 0.1 TUJUAN PEMBELAJARAN (LEARNING GOALS) */}
+        <div className="space-y-3">
+          <label className="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <BookOpen className="h-4 w-4 text-emerald-400" />
+              Tujuan Utama Belajar Bahasa Inggris
+            </span>
+            <span className="text-[10px] text-cyan-400 font-mono">Personalisasi Materi</span>
+          </label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {(Object.keys(LEARNING_GOALS) as UserLearningGoal[]).map((goalKey) => {
+              const meta = LEARNING_GOALS[goalKey];
+              const isSelected = prefs.goal === goalKey;
+              return (
+                <button
+                  key={goalKey}
+                  type="button"
+                  onClick={() => updateField('goal', goalKey)}
+                  className={`p-3.5 rounded-2xl border text-left transition flex flex-col justify-between cursor-pointer ${
+                    isSelected
+                      ? 'border-emerald-400 bg-emerald-500/20 text-white shadow-[0_0_15px_rgba(0,229,117,0.25)]'
+                      : 'border-[#1A2E40] bg-[#101C27] text-slate-400 hover:border-slate-500'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-2xl">{meta.emoji}</span>
+                    {isSelected && <Check className="h-4 w-4 text-emerald-400" />}
+                  </div>
+                  <div className="mt-2 font-black text-xs text-white">{meta.titleId}</div>
+                  <div className="text-[10px] text-slate-400 mt-0.5 leading-snug">
+                    {meta.descriptionId}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 0.2 TINGKAT KEMAHIRAN & RASIO DWIBAHASA (SANDWICH METHOD) */}
+        <div className="space-y-3">
+          <label className="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <Award className="h-4 w-4 text-cyan-400" />
+              Tingkat Kemahiran &amp; Rasio Bimbingan Dwibahasa
+            </span>
+            <span className="text-[10px] text-emerald-400 font-mono">Bilingual Sandwich Method</span>
+          </label>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            {(['A1', 'A2', 'B1'] as UserProficiencyTier[]).map((tierKey) => {
+              const meta = PROFICIENCY_TIERS[tierKey];
+              const isSelected = prefs.proficiencyTier === tierKey;
+              return (
+                <button
+                  key={tierKey}
+                  type="button"
+                  onClick={() => updateField('proficiencyTier', tierKey)}
+                  className={`p-3.5 rounded-2xl border text-left transition flex flex-col justify-between cursor-pointer ${
+                    isSelected
+                      ? tierKey === 'A1'
+                        ? 'border-emerald-400 bg-emerald-500/20 text-white shadow-[0_0_15px_rgba(0,229,117,0.25)]'
+                        : tierKey === 'A2'
+                        ? 'border-cyan-400 bg-cyan-500/20 text-white shadow-[0_0_15px_rgba(0,210,255,0.25)]'
+                        : 'border-purple-400 bg-purple-500/20 text-white shadow-[0_0_15px_rgba(168,85,247,0.25)]'
+                      : 'border-[#1A2E40] bg-[#101C27] text-slate-400 hover:border-slate-500'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span
+                      className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                        tierKey === 'A1'
+                          ? 'bg-emerald-500/30 text-emerald-300'
+                          : tierKey === 'A2'
+                          ? 'bg-cyan-500/30 text-cyan-300'
+                          : 'bg-purple-500/30 text-purple-300'
+                      }`}
+                    >
+                      {tierKey} • {meta.cefrRange}
+                    </span>
+                    {isSelected && <Check className="h-4 w-4 text-cyan-400" />}
+                  </div>
+                  <div className="mt-2 font-black text-xs text-white">{meta.titleId}</div>
+                  <div className="text-[10px] text-cyan-300 font-mono mt-0.5">
+                    {meta.porsiIndonesia}
+                  </div>
+                  <div className="text-[10px] text-slate-400 mt-1 leading-snug">
+                    {meta.descriptionId}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* 1. TARGET AKSEN & PROFIL AKUSTIK AI */}

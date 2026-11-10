@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Mail, Lock, User, Sparkles, AlertCircle, CheckCircle2, Loader2, ArrowRight } from 'lucide-react';
+import { Mail, Lock, User, AlertCircle, CheckCircle2, Loader2, ArrowRight, Mic } from 'lucide-react';
 
 interface AuthFormProps {
   mode: 'login' | 'register';
@@ -26,7 +26,6 @@ export function AuthForm({ mode }: AuthFormProps) {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [needsEmailConfirmation, setNeedsEmailConfirmation] = useState(false);
 
   const isLogin = mode === 'login';
 
@@ -35,7 +34,6 @@ export function AuthForm({ mode }: AuthFormProps) {
     e.preventDefault();
     setErrorMessage(null);
     setSuccessMessage(null);
-    setNeedsEmailConfirmation(false);
     setIsLoading(true);
 
     try {
@@ -50,7 +48,6 @@ export function AuthForm({ mode }: AuthFormProps) {
           if (error.message.includes('Invalid login credentials')) {
             throw new Error('Email atau kata sandi yang Anda masukkan salah.');
           } else if (error.message.includes('Email not confirmed')) {
-            setNeedsEmailConfirmation(true);
             throw new Error('Email Anda belum dikonfirmasi. Silakan periksa kotak masuk email Anda.');
           }
           throw error;
@@ -90,7 +87,6 @@ export function AuthForm({ mode }: AuthFormProps) {
 
         // Cek apakah Supabase mewajibkan konfirmasi email
         if (data?.user && !data.session) {
-          setNeedsEmailConfirmation(true);
           setSuccessMessage(
             'Pendaftaran berhasil! Akun Anda telah siap. Silakan masuk menggunakan email dan kata sandi Anda.'
           );
@@ -102,8 +98,8 @@ export function AuthForm({ mode }: AuthFormProps) {
           }, 1000);
         }
       }
-    } catch (err: any) {
-      setErrorMessage(err.message || 'Terjadi kesalahan saat memproses permintaan.');
+    } catch (err: unknown) {
+      setErrorMessage(err instanceof Error ? err.message : 'Terjadi kesalahan saat memproses permintaan.');
     } finally {
       setIsLoading(false);
     }
@@ -125,8 +121,8 @@ export function AuthForm({ mode }: AuthFormProps) {
         },
       });
       if (error) throw error;
-    } catch (err: any) {
-      setErrorMessage(err.message || 'Gagal memulai login dengan Google.');
+    } catch (err: unknown) {
+      setErrorMessage(err instanceof Error ? err.message : 'Gagal memulai login dengan Google.');
       setIsGoogleLoading(false);
     }
   }
@@ -135,8 +131,8 @@ export function AuthForm({ mode }: AuthFormProps) {
     <Card className="w-full max-w-md mx-auto border-[#1E374D] bg-[#0E1722]/95 shadow-2xl backdrop-blur-xl">
       <CardHeader className="space-y-2 text-center pb-6">
         <div className="flex items-center justify-center gap-2 mb-1">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 font-black">
-            🎙️
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
+            <Mic className="h-4 w-4 text-emerald-400" />
           </div>
           <span className="text-sm font-black tracking-wider text-emerald-400 uppercase">
             Fluenzy Pronounce
@@ -283,6 +279,41 @@ export function AuthForm({ mode }: AuthFormProps) {
               </>
             )}
           </Button>
+
+          {/* Demo Account Quick Access */}
+          <div className="pt-3 border-t border-[#1E374D]/60 text-center">
+            <p className="text-[11px] font-bold text-slate-400 mb-2">🚀 ATAU MASUK CEPAT SEBAGAI AKUN DEMO:</p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  try {
+                    localStorage.setItem('fluenzy_user_email', 'hafid@fluenzy.id');
+                    localStorage.setItem('fluenzy_user_name', 'Hafid (Mahasiswa PTI)');
+                  } catch {}
+                  router.push('/dashboard');
+                }}
+                className="p-2 text-left bg-[#101D2D] hover:bg-[#1A2E44] border border-purple-500/30 rounded-xl transition text-[11px]"
+              >
+                <div className="font-bold text-purple-300">🎓 Mahasiswa PTI</div>
+                <div className="text-[10px] text-slate-400">Sidang Skripsi • B1/B2</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  try {
+                    localStorage.setItem('fluenzy_user_email', 'dosen@fluenzy.id');
+                    localStorage.setItem('fluenzy_user_name', 'Dosen Penguji');
+                  } catch {}
+                  router.push('/dashboard');
+                }}
+                className="p-2 text-left bg-[#101D2D] hover:bg-[#1A2E44] border border-amber-500/30 rounded-xl transition text-[11px]"
+              >
+                <div className="font-bold text-amber-300">👨‍🏫 Dosen Penguji</div>
+                <div className="text-[10px] text-slate-400">Full Evaluator • B2</div>
+              </button>
+            </div>
+          </div>
         </form>
 
         {/* Switch Mode Link */}

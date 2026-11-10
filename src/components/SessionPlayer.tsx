@@ -7,33 +7,22 @@ import { LottiePlayer } from '@/components/ui/LottiePlayer';
 import {
   Heart,
   X,
-  CheckCircle2,
   AlertCircle,
   Sparkles,
   ArrowRight,
-  RotateCcw,
   Volume2,
-  Brain,
-  Award,
   Zap,
-  Gauge,
-  Lightbulb,
-  Sliders,
   Play,
   Pause,
   ChevronRight,
-  Headphones,
-  Shield,
-  Gem,
 } from 'lucide-react';
 import { PersonalizationModal } from '@/components/PersonalizationModal';
-import { getUserPreferences, getCompanionInfo, MascotChoice } from '@/lib/core/preferences';
+import { getUserPreferences, getCompanionInfo, MascotChoice, EnglishAccentChoice } from '@/lib/core/preferences';
 import {
   speakText,
   speakWord,
   speakLetter,
   speakTurtleMode,
-  speakBilingualText,
   extractEnglishTarget,
   stopSpeech,
   playBubblePop,
@@ -74,10 +63,10 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
   const [error, setError] = useState<string | null>(null);
 
   // Companion & Audio Speed
-  const [mascotChoice, setMascotChoice] = useState<MascotChoice>('lily');
-  const [speechRate, setSpeechRate] = useState<number>(0.95);
-  const [preferredAccent, setPreferredAccent] = useState<string>('auto');
-  const [autoPronounce, setAutoPronounce] = useState<boolean>(false);
+  const [mascotChoice, setMascotChoice] = useState<MascotChoice>(() => getUserPreferences().mascot);
+  const [speechRate, setSpeechRate] = useState<number>(() => getUserPreferences().audioSpeed);
+  const [preferredAccent, setPreferredAccent] = useState<EnglishAccentChoice>(() => getUserPreferences().englishAccent);
+  const [autoPronounce, setAutoPronounce] = useState<boolean>(() => getUserPreferences().autoPronounce);
   const [isTurtleMode, setIsTurtleMode] = useState<boolean>(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState<boolean>(false);
   const [isPlayingTargetOnly, setIsPlayingTargetOnly] = useState<boolean>(false);
@@ -85,12 +74,6 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
   const [isPersonalizationOpen, setIsPersonalizationOpen] = useState(false);
 
   useEffect(() => {
-    const prefs = getUserPreferences();
-    setMascotChoice(prefs.mascot);
-    setSpeechRate(prefs.audioSpeed);
-    setPreferredAccent(prefs.englishAccent);
-    setAutoPronounce(prefs.autoPronounce);
-
     const handlePrefChange = (e: Event) => {
       const customEvent = e as CustomEvent;
       if (customEvent.detail) {
@@ -143,7 +126,43 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
   const [heartsOut, setHeartsOut] = useState(false);
 
   // Pengukuran Waktu Respons
-  const startTimeRef = useRef<number>(Date.now());
+  const startTimeRef = useRef<number>(0);
+
+  // Reset state saat berganti soal
+  const resetForQuestion = React.useCallback(
+    (q?: QuestionData) => {
+      startTimeRef.current = Date.now();
+      stopSpeech();
+      setSelectedOption('');
+      setTextAnswer('');
+      setFeedback(null);
+      setIsPlayingAudio(false);
+      setIsPlayingTargetOnly(false);
+      setIsPlayingExplanation(false);
+
+      if (q?.type === 'word_order') {
+        try {
+          const payload = JSON.parse(q.payload);
+          const tokens: string[] = payload.tokens || [];
+          setAvailableTokens([...tokens].sort(() => Math.random() - 0.5));
+          setWordOrderTokens([]);
+        } catch {
+          setAvailableTokens([]);
+          setWordOrderTokens([]);
+        }
+      } else {
+        setAvailableTokens([]);
+        setWordOrderTokens([]);
+      }
+
+      setCompanionMessage(
+        companion.id === 'arthur' || companion.id === 'boy'
+          ? 'Fokus pada pola kalimat dan struktur teknisnya.'
+          : 'Kamu pasti bisa! Sedikit demi sedikit, pasti bisa!'
+      );
+    },
+    [companion]
+  );
 
   // Ambil data soal dari server
   useEffect(() => {
@@ -154,7 +173,11 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
         const res = await fetch(url);
         if (!res.ok) throw new Error('Gagal mengambil daftar soal.');
         const data = await res.json();
-        setQuestions(data.questions || []);
+        const list: QuestionData[] = data.questions || [];
+        setQuestions(list);
+        if (list.length > 0) {
+          resetForQuestion(list[0]);
+        }
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : 'Terjadi kesalahan sistem.');
       } finally {
@@ -162,40 +185,9 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
       }
     }
     fetchQuestions();
-  }, [mode, lessonId]);
+  }, [mode, lessonId, resetForQuestion]);
 
-  // Reset state saat berganti soal
   const currentQ = questions[currentIndex];
-  useEffect(() => {
-    if (!currentQ) return;
-    startTimeRef.current = Date.now();
-    stopSpeech();
-    setSelectedOption('');
-    setTextAnswer('');
-    setFeedback(null);
-    setIsPlayingAudio(false);
-    setIsPlayingTargetOnly(false);
-    setIsPlayingExplanation(false);
-
-    // Siapkan token untuk word_order
-    if (currentQ.type === 'word_order') {
-      try {
-        const payload = JSON.parse(currentQ.payload);
-        const tokens: string[] = payload.tokens || [];
-        setAvailableTokens([...tokens].sort(() => Math.random() - 0.5));
-        setWordOrderTokens([]);
-      } catch {
-        setAvailableTokens([]);
-        setWordOrderTokens([]);
-      }
-    }
-
-    setCompanionMessage(
-      companion.id === 'arthur' || companion.id === 'boy'
-        ? 'Fokus pada pola kalimat dan struktur teknisnya.'
-        : 'Kamu pasti bisa! Sedikit demi sedikit, pasti bisa!'
-    );
-  }, [currentIndex, currentQ, companion]);
 
   // Audio Playback: Memutar soal dengan transisi bahasa dan artikulasi pedagogis yang jelas
   function handlePlayAudio() {
@@ -211,14 +203,14 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
     const textToSpeak = currentQ.prompt;
     if (isTurtleMode) {
       speakTurtleMode(textToSpeak, {
-        preferredAccent: preferredAccent as any,
+        preferredAccent,
         emotion: 'pedagogical',
         onEnd: () => setIsPlayingAudio(false),
       });
     } else {
       speakText(textToSpeak, {
         rate: speechRate,
-        preferredAccent: preferredAccent as any,
+        preferredAccent,
         emotion: 'pedagogical',
         onEnd: () => setIsPlayingAudio(false),
       });
@@ -238,7 +230,7 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
     setIsPlayingAudio(false);
     speakText(target, {
       lang: 'en-US',
-      preferredAccent: preferredAccent as any,
+      preferredAccent,
       rate: isTurtleMode ? 0.65 : speechRate,
       emotion: 'pedagogical',
       onEnd: () => setIsPlayingTargetOnly(false),
@@ -312,7 +304,7 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
             setTimeout(() => {
               speakText(target, {
                 lang: 'en-US',
-                preferredAccent: preferredAccent as any,
+                preferredAccent,
                 emotion: 'cheerful',
               });
             }, 350);
@@ -334,12 +326,11 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
   // Lanjut ke soal berikutnya
   function handleNextQuestion() {
     stopSpeech();
-    setIsPlayingAudio(false);
-    setIsPlayingTargetOnly(false);
-    setIsPlayingExplanation(false);
     if (currentIndex + 1 < questions.length) {
       playBubblePop();
-      setCurrentIndex((prev) => prev + 1);
+      const nextIdx = currentIndex + 1;
+      setCurrentIndex(nextIdx);
+      resetForQuestion(questions[nextIdx]);
     } else {
       playCelebrationSound();
       setSessionCompleted(true);
@@ -407,7 +398,7 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
               className="btn-neon-pill w-full py-3 text-xs gap-2"
             >
               <Sparkles className="h-4 w-4" />
-              Latihan Titik Lemah (Zero Risk ❤️)
+              <span>Latihan Titik Lemah (Zero Risk Mode)</span>
             </Link>
             <Link
               href="/dashboard"
@@ -545,7 +536,7 @@ export function SessionPlayer({ mode, lessonId, title }: SessionPlayerProps) {
             {mode === 'weakness' ? (
               <span className="text-[11px] font-black px-3 py-1.5 rounded-xl bg-amber-500/15 text-amber-300 border border-amber-500/40 flex items-center gap-1.5 shadow-[0_0_10px_rgba(245,158,11,0.2)]">
                 <Sparkles className="h-3.5 w-3.5 text-amber-400" />
-                Bebas Risiko ❤️
+                <span>Bebas Risiko (Safe Practice)</span>
               </span>
             ) : (
               <div className="flex items-center gap-1.5 text-xs font-black text-rose-400 bg-rose-500/15 border border-rose-500/40 px-3 py-1.5 rounded-xl shadow-[0_0_10px_rgba(244,63,94,0.2)]">

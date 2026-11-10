@@ -4,6 +4,7 @@ import {
   calculateLevenshteinDistance,
   getPhoneticRepresentation,
   detectCriticalPhonemeIssues,
+  getWordStressGuidance,
   WordScore,
 } from '../pronunciation';
 
@@ -56,5 +57,38 @@ describe('ELSA-Style Pronunciation Evaluation Engine', () => {
     const vIssue = issues.find((i) => i.targetWord === 'very');
     expect(vIssue).toBeDefined();
     expect(vIssue?.expectedPhoneme).toBe('/v/');
+  });
+
+  it('menghitung metrik kelancaran temporal (WPM & CEFR Speed Tier) saat durasi audio diberikan', () => {
+    const target = 'Hello my name is Alex and I am learning English';
+    const spoken = 'Hello my name is Alex and I am learning English'; // 10 kata
+
+    // Durasi 6 detik -> WPM = (10 / 6) * 60 = 100 WPM (B1 Target: 95-135 WPM)
+    const result = evaluatePronunciation(target, spoken, 6);
+    expect(result.temporalMetrics).toBeDefined();
+    expect(result.temporalMetrics?.wordsPerMinute).toBe(100);
+    expect(result.temporalMetrics?.cefrSpeedTier).toBe('B1 Target');
+    expect(result.temporalMetrics?.durationSeconds).toBe(6);
+
+    // Durasi 20 detik untuk 10 kata -> WPM = 30 WPM (Too Slow)
+    const slowResult = evaluatePronunciation(target, spoken, 20);
+    expect(slowResult.temporalMetrics?.wordsPerMinute).toBe(30);
+    expect(slowResult.temporalMetrics?.cefrSpeedTier).toBe('Too Slow');
+    expect(slowResult.fluencyScore).toBeLessThan(result.fluencyScore);
+  });
+
+  it('memberikan panduan tekanan suku kata (syllable stress) untuk kata-kata kritis', () => {
+    const guide = getWordStressGuidance('architecture');
+    expect(guide).not.toBeNull();
+    expect(guide?.syllables).toBe('AR-ki-tek-cher');
+    expect(guide?.stressedSyllable).toBe('AR');
+    expect(guide?.stressedIndex).toBe(0);
+
+    const discussGuide = getWordStressGuidance('discuss!');
+    expect(discussGuide?.stressedSyllable).toBe('SKAS');
+    expect(discussGuide?.stressedIndex).toBe(1);
+
+    expect(getWordStressGuidance('unknownword123')).toBeNull();
+    expect(getWordStressGuidance('')).toBeNull();
   });
 });

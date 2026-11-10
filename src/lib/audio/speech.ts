@@ -3,7 +3,7 @@
 // Supports Customizable Accents (US, UK, AU), Indonesian Voices, & Code-Switching
 // ============================================================================
 
-import { getUserPreferences, EnglishAccentChoice } from '@/lib/core/preferences';
+import { getUserPreferences, EnglishAccentChoice, getEffectiveVoiceGender } from '@/lib/core/preferences';
 
 /**
  * Memainkan suara "pop" ringan saat memilih/mengetuk kata atau huruf.
@@ -1014,14 +1014,7 @@ function _speakBrowserFallback(text: string, options: SpeechOptions = {}) {
   }
 
   const effectiveGender: 'male' | 'female' =
-    options.gender ||
-    (prefs
-      ? prefs.voiceGender === 'auto'
-        ? prefs.mascot === 'girl' || prefs.mascot === 'lily'
-          ? 'female'
-          : 'male'
-        : prefs.voiceGender
-      : 'male');
+    options.gender || getEffectiveVoiceGender(prefs || undefined);
 
   const naturalPitch = options.pitch ?? (effectiveGender === 'male' ? 0.94 : 1.02);
 

@@ -59,22 +59,88 @@ export function calculateLevenshteinDistance(a: string, b: string): number {
   return dp[m][n];
 }
 
+export const CONTRACTIONS_MAP: Record<string, string> = {
+  "i'm": "i am",
+  "can't": "can not",
+  "cannot": "can not",
+  "don't": "do not",
+  "doesn't": "does not",
+  "didn't": "did not",
+  "won't": "will not",
+  "it's": "it is",
+  "that's": "that is",
+  "there's": "there is",
+  "what's": "what is",
+  "who's": "who is",
+  "we're": "we are",
+  "they're": "they are",
+  "you're": "you are",
+  "i've": "i have",
+  "we've": "we have",
+  "they've": "they have",
+  "you've": "you have",
+  "i'll": "i will",
+  "we'll": "we will",
+  "they'll": "they will",
+  "you'll": "you will",
+  "i'd": "i would",
+  "we'd": "we would",
+  "they'd": "they would",
+  "you'd": "you would",
+  "he'd": "he would",
+  "she'd": "she would",
+  "he's": "he is",
+  "she's": "she is",
+  "aren't": "are not",
+  "isn't": "is not",
+  "wasn't": "was not",
+  "weren't": "were not",
+  "haven't": "have not",
+  "hasn't": "has not",
+  "hadn't": "had not",
+  "shouldn't": "should not",
+  "wouldn't": "would not",
+  "couldn't": "could not",
+  "let's": "let us",
+};
+
 /**
- * Normalisasi teks: lowercase, trim, hilangkan tanda baca luar, dan rapikan multiple spasi.
+ * Normalisasi teks canggih & adil: menangani smart quotes, tanda hubung, dan kontraksi bahasa Inggris.
+ */
+export function normalizeFairText(text: string): string {
+  let n = (text || '')
+    .toLowerCase()
+    .replace(/[’‘`]/g, "'")
+    .replace(/[-]/g, ' ');
+
+  for (const [k, v] of Object.entries(CONTRACTIONS_MAP)) {
+    const escaped = k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    n = n.replace(new RegExp(`\\b${escaped}\\b`, 'g'), v);
+  }
+
+  return n
+    .replace(/[.,/#!$%^&*;:{}=\_~()?'"]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Normalisasi teks dasar untuk kompatibilitas ke belakang (menghapus tanda baca, spasi berlebih, huruf kecil).
  */
 export function normalizeText(text: string): string {
-  return text
+  return (text || '')
     .toLowerCase()
     .replace(/[.,/#!$%^&*;:{}=\-_`~()?'"]/g, '')
     .replace(/\s+/g, ' ')
     .trim();
 }
 
+
 /**
  * Memecah string menjadi array token kata bersih.
  */
 export function tokenizeWords(text: string): string[] {
-  const normalized = normalizeText(text);
+  const normalized = normalizeFairText(text);
   if (!normalized) return [];
   return normalized.split(' ');
 }
@@ -91,8 +157,8 @@ export function classifyError(
   correctAnswer: string,
   exerciseType: string = 'fill_blank'
 ): ErrorClassificationResult {
-  const cleanUser = normalizeText(userAnswer);
-  const cleanCorrect = normalizeText(correctAnswer);
+  const cleanUser = normalizeFairText(userAnswer);
+  const cleanCorrect = normalizeFairText(correctAnswer);
 
   // 1. Kasus Sempurna: Teks identik setelah normalisasi
   if (cleanUser === cleanCorrect) {

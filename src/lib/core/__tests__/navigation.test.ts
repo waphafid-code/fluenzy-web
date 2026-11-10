@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { COMPANIONS, getCompanionInfo, saveUserPreferences, getUserPreferences } from '../preferences';
+import { getCompanionInfo, saveUserPreferences, getUserPreferences } from '../preferences';
 import { NAV_TABS } from '@/components/Navigation';
 
 describe('Gamification 4-Tab Navigation & Companion Architecture', () => {
@@ -39,18 +39,18 @@ describe('Gamification 4-Tab Navigation & Companion Architecture', () => {
     expect(profileTab?.href).toBe('/profile');
   });
 
-  it('memvalidasi metadata 2 Karakter 3D (Lily & Arthur)', () => {
-    const lily = getCompanionInfo('lily');
-    expect(lily.name).toContain('Lily');
-    expect(lily.role).toBe('AI Peer & Speaking Coach');
-    expect(lily.avatar).toBe('/mascot/lily_head_circle.png');
-    expect(lily.specialty).toContain('Speaking Drill');
-
+  it('memvalidasi metadata Karakter Pendamping (Arthur & Leo)', () => {
     const arthur = getCompanionInfo('arthur');
-    expect(arthur.name).toBe('Arthur');
+    expect(arthur.name).toContain('Arthur');
+    expect(arthur.gender).toBe('male');
     expect(arthur.role).toBe('Tech Lead & Diagnostic Mentor');
     expect(arthur.avatar).toBe('/mascot/arthur_head_circle.png');
-    expect(arthur.specialty).toContain('Weekly Boss Battle');
+    expect(arthur.specialty).toContain('Diagnostic Tests');
+
+    const boy = getCompanionInfo('boy');
+    expect(boy.name).toBe('Leo');
+    expect(boy.gender).toBe('male');
+    expect(boy.role).toBe('Tech Lead & Diagnostic Mentor');
   });
 
   it('mendukung pergantian preferensi companion ke lily atau arthur', () => {

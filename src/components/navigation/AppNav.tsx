@@ -28,8 +28,8 @@ export function AppNav() {
         <div className="space-y-8">
           {/* Brand Logo */}
           <Link href="/home" className="flex items-center gap-2.5 px-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-lg font-black shadow-[0_0_15px_rgba(0,229,117,0.2)]">
-              🎙️
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shadow-[0_0_15px_rgba(0,229,117,0.2)]">
+              <Mic className="h-5 w-5 text-emerald-400" />
             </div>
             <div>
               <span className="text-base font-black text-white tracking-tight">Fluenzy AI</span>

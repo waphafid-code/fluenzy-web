@@ -46,14 +46,16 @@ export const SUS_QUESTIONS = [
  * Menghitung skor SUS murni dari array 10 jawaban Likert (1 - 5).
  */
 export function calculateSusScore(responses: number[]): SusCalculationResult {
-  if (!responses || responses.length !== 10) {
+  if (!responses || !Array.isArray(responses) || responses.length !== 10) {
     throw new Error('Penilaian SUS memerlukan tepat 10 butir jawaban.');
   }
 
   let totalContribution = 0;
 
   for (let i = 0; i < 10; i++) {
-    const rawVal = Math.max(1, Math.min(5, Math.round(responses[i])));
+    const parsed = Number(responses[i]);
+    const safeNum = Number.isFinite(parsed) ? parsed : 3;
+    const rawVal = Math.max(1, Math.min(5, Math.round(safeNum)));
     const itemNumber = i + 1;
 
     if (itemNumber % 2 !== 0) {

@@ -23,6 +23,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { LottiePlayer } from '@/components/ui/LottiePlayer';
 import { playBubblePop, speakText } from '@/lib/audio/speech';
+import { CompetencyCertificateModal } from '@/components/CompetencyCertificateModal';
 
 interface DayXp {
   day: string;
@@ -89,13 +90,14 @@ const WEAK_PHONEMES = [
 export default function ProgressPage() {
   const [selectedRange, setSelectedRange] = useState<'week' | 'month'>('week');
   const [activeDayIndex, setActiveDayIndex] = useState<number>(4); // Friday default
+  const [showCertificateModal, setShowCertificateModal] = useState<boolean>(false);
 
   const activeDay = WEEK_XP_DATA[activeDayIndex];
 
   return (
     <div className="space-y-6 pb-12 max-w-4xl mx-auto">
-      {/* 1. TOP HEADER (Progress Title + Timeframe Filter) */}
-      <div className="animate-fade-in-down flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      {/* 1. TOP HEADER (Progress Title + Timeframe Filter + Certificate Claim) */}
+      <div className="animate-fade-in-down flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <span className="text-[11px] font-black uppercase tracking-wider text-[#6366F1]">
@@ -110,8 +112,20 @@ export default function ProgressPage() {
           </p>
         </div>
 
-        {/* Dropdown Filter Pill */}
-        <div className="flex items-center gap-2 self-start sm:self-auto">
+        {/* Action Controls */}
+        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={() => {
+              playBubblePop();
+              setShowCertificateModal(true);
+            }}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-300 text-xs font-bold transition cursor-pointer shadow-[0_0_12px_rgba(0,229,117,0.2)]"
+          >
+            <Award className="h-3.5 w-3.5 text-emerald-400" />
+            <span>Klaim Sertifikat CEFR</span>
+          </button>
+
           <div className="inline-flex rounded-full bg-[#1E293B] p-1 border border-white/10 text-xs font-bold text-slate-300">
             <button
               onClick={() => {
@@ -142,6 +156,16 @@ export default function ProgressPage() {
           </div>
         </div>
       </div>
+
+      {/* Competency Certificate Modal */}
+      <CompetencyCertificateModal
+        isOpen={showCertificateModal}
+        onClose={() => setShowCertificateModal(false)}
+        studentName="Budi Santoso"
+        cefrLevel="B1"
+        wpm={94}
+        accuracy={92}
+      />
 
       {/* 2. MAIN XP CHART CARD (Screen 5 Lingua Area Chart Style) */}
       <Card className="animate-fade-in-up relative overflow-hidden border-0 bg-gradient-to-br from-[#1E1B4B] via-[#0F172A] to-[#0A0E1A] p-6 sm:p-7 text-white shadow-2xl rounded-3xl">
@@ -250,31 +274,28 @@ export default function ProgressPage() {
         </div>
       </Card>
 
-      {/* 3. MASCOT CHEER COMPANION CARD (Cute Baby Owl Coach Lumi) */}
-      <div className="animate-fade-in-scale relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#181E36] via-[#1E293B] to-[#141B2D] border border-white/10 p-5 sm:p-6 shadow-xl card-hover-lift">
+      {/* 3. ACOUSTIC MILESTONE COMPANION CARD */}
+      <div className="animate-fade-in-scale relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#0F1E2C] via-[#0D1824] to-[#0A131C] border border-[#1E374D] p-5 sm:p-6 shadow-xl card-hover-lift">
         <div className="flex flex-col sm:flex-row items-center gap-5">
-          {/* Owl Coach 3D Squircle */}
-          <div className="relative h-20 w-20 sm:h-24 sm:w-24 shrink-0 rounded-3xl overflow-hidden border-2 border-indigo-500/40 shadow-xl bg-indigo-950/40">
-            <Image
-              src="/mascot/lingua_owl_coach.jpg"
-              alt="Coach Lumi the Cute Owl"
-              width={96}
-              height={96}
-              className="h-full w-full object-cover"
-              priority
+          {/* Lottie Audio Wave Pulse */}
+          <div className="relative h-20 w-20 sm:h-24 sm:w-24 shrink-0 rounded-3xl overflow-hidden border-2 border-emerald-500/40 shadow-xl bg-[#060D15] flex items-center justify-center p-2">
+            <LottiePlayer
+              animationPath="/animations/audio_wave_pulse.json"
+              loop={true}
+              className="w-full h-full scale-110"
             />
           </div>
 
           <div className="flex-1 text-center sm:text-left space-y-1">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 text-[11px] font-black border border-indigo-500/30">
-              <Sparkles className="h-3 w-3 text-amber-400" />
-              <span>Coach Lumi Says</span>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 text-[11px] font-black border border-emerald-500/30">
+              <Sparkles className="h-3 w-3 text-emerald-400" />
+              <span>Acoustic Milestone Engine</span>
             </div>
             <h3 className="text-base sm:text-lg font-black text-white">
-              You&apos;re 82% towards your Weekly Master Trophy! 🦉
+              Pencapaian Mingguan: 82% Menuju Sertifikasi CEFR B1
             </h3>
             <p className="text-xs text-slate-300 leading-relaxed max-w-xl">
-              Just 3 more conversational drills to secure the Diamond League. Keep your speaking momentum alive!
+              Selesaikan 3 sesi percakapan lagi untuk memvalidasi kelancaran temporal WPM dan mengklaim sertifikat kelulusan resmi.
             </p>
           </div>
 
@@ -341,11 +362,16 @@ export default function ProgressPage() {
         {/* Card 3: Streak */}
         <Card className="border-0 bg-[#0F172A] p-5 rounded-2xl border border-white/5 space-y-2 hover:border-white/15 transition-all">
           <div className="flex items-center justify-between">
-            <div className="h-10 w-10 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/30">
-              <Flame className="h-5 w-5" />
+            <div className="h-10 w-10 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/30 overflow-hidden">
+              <LottiePlayer
+                animationPath="/animations/streak_fire.json"
+                loop={true}
+                className="w-full h-full scale-125"
+              />
             </div>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400">
-              Active 🔥
+            <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">
+              <Flame className="h-3 w-3 fill-amber-400" />
+              <span>Active Streak</span>
             </span>
           </div>
           <div>

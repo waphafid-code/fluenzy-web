@@ -21,8 +21,10 @@ import {
   Swords,
   ChevronRight,
   RotateCcw,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { Navigation } from '@/components/Navigation';
+import { PhoneticFingerprintRadar } from '@/components/PhoneticFingerprintRadar';
 import { playBubblePop } from '@/lib/audio/speech';
 import {
   ResponsiveContainer,
@@ -361,6 +363,9 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* TAHAP 7: PERSONAL PHONETIC FINGERPRINT (RADAR 6 FONEM L1 INDONESIA) */}
+        <PhoneticFingerprintRadar />
+
         {/* COGNITIVE DIAGNOSIS & TITIK LEMAH SECTION */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Distribusi Kesalahan Kognitif */}
@@ -446,6 +451,34 @@ export default function DashboardPage() {
               </Link>
             </div>
           </div>
+        </div>
+
+        {/* THESIS RESEARCH INSTRUMENTS CARD (Scope 5) */}
+        <div className="card-cyber p-6 rounded-2xl border border-indigo-500/30 bg-gradient-to-r from-indigo-950/40 via-[#0A131C] to-emerald-950/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1.5 max-w-xl">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
+                Data Riset &amp; Skripsi
+              </span>
+              <span className="text-slate-500">•</span>
+              <span className="text-[10px] font-mono text-emerald-400">Tahap 5: Evaluasi Responden</span>
+            </div>
+            <h3 className="text-base font-black text-white flex items-center gap-2">
+              <FileSpreadsheet className="h-4 w-4 text-emerald-400" />
+              <span>Instrumen System Usability Scale (SUS) &amp; Ekspor Dataset CSV</span>
+            </h3>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Kuesioner 10 butir terstandar (Brooke, 1996) dan ekspor dataset lengkap (AnswerLog, Skill Mastery, Normalized Gain Hake, &amp; SUS) siap olah SPSS/Python untuk Bab 4 Skripsi.
+            </p>
+          </div>
+          <Link
+            href="/research"
+            onClick={() => playBubblePop()}
+            className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs transition flex items-center gap-2 shadow-lg shrink-0 cursor-pointer self-start sm:self-center"
+          >
+            <span>Buka Portal Evaluasi</span>
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
         </div>
       </main>
     </div>

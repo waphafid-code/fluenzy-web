@@ -5,12 +5,12 @@ import { calculateMasteryUpdate, calculateSkillStatsUpdate } from '@/lib/core/ma
 import { processReviewOutcome } from '@/lib/core/spacedRepetition';
 import { deductHeartOnIncorrect, calculateQuestionXp } from '@/lib/core/gamification';
 import { explainMistake } from '@/lib/ai/explain';
+import { createClient } from '@/lib/supabase/server';
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const body = await request.json().catch(() => ({}));
     const {
-      userEmail = 'budi@fluenzy.id',
       questionId,
       userAnswer,
       exerciseType = 'fill_blank',
@@ -19,34 +19,82 @@ export async function POST(request: Request) {
       isWeakPractice = false,
     } = body;
 
-    // 1. Ambil data User & Soal
-    let user = await prisma.user.findFirst({
-      where: { email: userEmail },
-      include: { stats: true },
-    });
+    // 1. Autentikasi Pengguna & Pencegahan Keracunan Data (Data Poisoning)
+    // Cek sesi autentikasi Supabase terverifikasi dari cookie
+    let authEmail: string | null = null;
+    let authName: string | null = null;
 
-    if (!user) {
-      user = await prisma.user.findFirst({
-        include: { stats: true },
-      });
+    try {
+      const supabase = await createClient();
+      const {
+        data: { user: authUser },
+      } = await supabase.auth.getUser();
+
+      if (authUser?.email) {
+        authEmail = authUser.email;
+        authName = authUser.user_metadata?.full_name || authUser.email.split('@')[0];
+      }
+    } catch {
+      // Server-side auth check fallback for test / headless environments
     }
 
-    if (!user) {
-      user = await prisma.user.create({
-        data: {
-          email: userEmail,
-          name: 'Pelajar Fluenzy',
-          passwordHash: 'guest_managed',
-          stats: {
-            create: {
-              totalXp: 100,
-              hearts: 5,
-              currentStreak: 1,
-            },
-          },
-        },
+    let user;
+    if (authEmail) {
+      // Siswa terdaftar resmi - selalu gunakan identitas autentikasi terverifikasi
+      user = await prisma.user.findFirst({
+        where: { email: authEmail },
         include: { stats: true },
       });
+
+      if (!user) {
+        user = await prisma.user.create({
+          data: {
+            email: authEmail,
+            name: authName || 'Pelajar Fluenzy',
+            passwordHash: 'supabase_auth_managed',
+            stats: {
+              create: {
+                totalXp: 100,
+                hearts: 5,
+                currentStreak: 1,
+              },
+            },
+          },
+          include: { stats: true },
+        });
+      }
+    } else {
+      // Pengguna tamu tanpa autentikasi: isolasi ketat dalam sandbox berbasis guestId
+      // Jangan pernah mencampuradukkan atau menimpa progres siswa terdaftar
+      const rawGuestId =
+        (typeof body.guestId === 'string' && body.guestId.trim()) ||
+        request.headers.get('x-guest-id') ||
+        'guest_session';
+      const sanitizedGuestId = rawGuestId.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 36);
+      const guestEmail = `guest_${sanitizedGuestId || 'anonymous'}@guest.fluenzy.local`;
+
+      user = await prisma.user.findFirst({
+        where: { email: guestEmail },
+        include: { stats: true },
+      });
+
+      if (!user) {
+        user = await prisma.user.create({
+          data: {
+            email: guestEmail,
+            name: 'Tamu Fluenzy',
+            passwordHash: 'guest_sandboxed',
+            stats: {
+              create: {
+                totalXp: 100,
+                hearts: 5,
+                currentStreak: 1,
+              },
+            },
+          },
+          include: { stats: true },
+        });
+      }
     }
 
     const question = await prisma.question.findUnique({

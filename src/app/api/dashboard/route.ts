@@ -210,6 +210,7 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
+    if ((error as { digest?: string })?.digest?.startsWith('NEXT_')) throw error;
     console.error('Failed to fetch dashboard data:', error);
     return NextResponse.json(
       { error: 'Terjadi kesalahan saat memuat data dashboard.' },

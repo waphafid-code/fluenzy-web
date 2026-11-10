@@ -95,6 +95,7 @@ export async function GET(request: Request) {
       skills: Object.values(groupedBySkill),
     });
   } catch (error) {
+    if ((error as { digest?: string })?.digest?.startsWith('NEXT_')) throw error;
     console.error('Failed to fetch mistakes:', error);
     return NextResponse.json({ error: 'Gagal memuat rekapitulasi kesalahan' }, { status: 500 });
   }

@@ -3,6 +3,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/server';
 import { NeuralVoiceOrb } from '@/components/NeuralVoiceOrb';
+import { DailyWarmupBanner } from '@/components/DailyWarmupBanner';
 import {
   Flame,
   Zap,
@@ -14,6 +15,7 @@ import {
   BookOpen,
   Headphones,
   PenTool,
+  MessageSquare,
   Target,
   Gift,
   ChevronRight,
@@ -122,6 +124,9 @@ async function HomeContent() {
         </div>
       </div>
 
+      {/* 2.5 DAILY 60-SEC WARMUP BANNER (Leitner Memory Spaced Review) */}
+      <DailyWarmupBanner />
+
       {/* 3. QUICK PRACTICE (4 Soft Pastel Squircle Cards - Matching Reference Image 1) */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
@@ -172,17 +177,17 @@ async function HomeContent() {
             </div>
           </Link>
 
-          {/* Card 4: Grammar */}
+          {/* Card 4: Roleplay */}
           <Link
-            href="/arena"
+            href="/practice/roleplay"
             className="card-lingua p-4 rounded-2xl flex flex-col items-center text-center space-y-2.5 hover:scale-102 transition group cursor-pointer"
           >
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/20 text-amber-300 border border-amber-500/30 group-hover:bg-amber-500/30 transition shadow-sm">
-              <PenTool className="h-6 w-6" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 group-hover:bg-indigo-500/30 transition shadow-sm">
+              <MessageSquare className="h-6 w-6" />
             </div>
             <div>
-              <div className="text-xs font-black text-white">Grammar</div>
-              <div className="text-[10px] text-slate-400 font-medium">Syntax Surgery</div>
+              <div className="text-xs font-black text-white">Roleplay</div>
+              <div className="text-[10px] text-slate-400 font-medium">Micro-Dialog AI</div>
             </div>
           </Link>
         </div>

@@ -24,6 +24,7 @@ import {
   RotateCcw,
   Shield,
   Compass,
+  X,
 } from 'lucide-react';
 import { Navigation } from '@/components/Navigation';
 import { playBubblePop, playCelebrationSound } from '@/lib/audio/speech';
@@ -345,11 +346,31 @@ export default function RoadmapPage() {
               <button
                 type="button"
                 onClick={() => setSelectedStage(null)}
-                className="text-slate-400 hover:text-white"
+                className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition cursor-pointer"
               >
-                ✕
+                <X className="h-4 w-4" />
               </button>
             </div>
+
+            {selectedStage.id <= currentProgressStage ? (
+              <div className="flex flex-col items-center justify-center -my-2">
+                <LottiePlayer
+                  animationPath="/animations/level_unlock.json"
+                  loop={false}
+                  className="h-20 w-20"
+                />
+                <span className="text-[11px] font-mono text-emerald-400 font-bold uppercase">
+                  Stage Terbuka (Unlocked)
+                </span>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-[#080E15] border border-slate-800">
+                <Lock className="h-6 w-6 text-slate-500 mb-1" />
+                <span className="text-[11px] font-mono text-slate-400 font-bold uppercase">
+                  Stage Terkunci • Selesaikan Stage {selectedStage.id - 1} Dulu
+                </span>
+              </div>
+            )}
 
             <div className="space-y-1">
               <h3 className="text-xl font-black text-white">{selectedStage.title}</h3>

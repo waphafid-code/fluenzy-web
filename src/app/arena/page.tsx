@@ -23,6 +23,7 @@ import {
   Shield,
   Layers,
   Clock,
+  Puzzle,
 } from 'lucide-react';
 import { Navigation } from '@/components/Navigation';
 import { LottiePlayer } from '@/components/ui/LottiePlayer';
@@ -297,6 +298,16 @@ export default function ArenaPage() {
                 >
                   <Sparkles className="h-4 w-4 text-emerald-400" />
                   <span>Buka Full ELSA-Style Speaking Lab (Gratis)</span>
+                  <ArrowRight className="h-3.5 w-3.5 ml-1" />
+                </Link>
+
+                {/* Direct Link to Sentence Chunks (Tahap 2) */}
+                <Link
+                  href="/practice/chunks"
+                  className="w-full py-2 px-4 rounded-xl bg-[#0D1824] hover:bg-[#122030] border border-cyan-500/30 text-cyan-300 font-bold text-xs flex items-center justify-center gap-2 transition"
+                >
+                  <Puzzle className="h-4 w-4 text-cyan-400" />
+                  <span>Rakit Pola Kalimat (Sentence Chunks)</span>
                   <ArrowRight className="h-3.5 w-3.5 ml-1" />
                 </Link>
               </div>

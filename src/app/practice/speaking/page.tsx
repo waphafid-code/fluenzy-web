@@ -5,12 +5,19 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Navigation } from '@/components/Navigation';
 import { LottiePlayer } from '@/components/ui/LottiePlayer';
-import { getUserPreferences } from '@/lib/core/preferences';
+import {
+  getUserPreferences,
+  UserLearningGoal,
+  UserProficiencyTier,
+  LEARNING_GOALS,
+  PROFICIENCY_TIERS,
+} from '@/lib/core/preferences';
 import {
   speakText,
   speakTurtleMode,
   speakWord,
   speakLetter,
+  stopSpeech,
   playBubblePop,
   playCelebrationSound,
 } from '@/lib/audio/speech';
@@ -18,12 +25,17 @@ import {
   evaluatePronunciation,
   getPhoneticRepresentation,
   detectCriticalPhonemeIssues,
+  getWordStressGuidance,
   WordScore,
   PronunciationResult,
   PhonemeIssue,
   PHONETIC_DICTIONARY,
 } from '@/lib/audio/pronunciation';
 import { AcousticSpectrogram } from '@/components/AcousticSpectrogram';
+import { AcousticPitchContour } from '@/components/AcousticPitchContour';
+import { generateEmpatheticFeedback } from '@/lib/audio/empatheticFeedback';
+import { EmpatheticFeedbackCard } from '@/components/EmpatheticFeedbackCard';
+import { ingestSpokenMistake, recordPracticeSession } from '@/lib/core/habitLoop';
 import {
   Mic,
   MicOff,
@@ -47,63 +59,199 @@ import {
   Lightbulb,
   Activity,
   Music,
+  Target,
 } from 'lucide-react';
 
-// Preset Engineering & Workplace Scenarios
+// Skenario Pembelajaran Berjenjang A1, A2, B1 dengan Kolaborasi Bilingual
 interface SpeakingScenario {
   id: string;
+  tier: UserProficiencyTier;
+  goal: UserLearningGoal;
   category: string;
   title: string;
   sentence: string;
   context: string;
+  phoneticFocus: string;
   difficulty: 'Easy' | 'Medium' | 'Advanced';
 }
 
 const PRESET_SCENARIOS: SpeakingScenario[] = [
+  // --- TIER A1: PEMULA DASAR (Bimbingan Santai 70% ID / 30% EN) ---
   {
-    id: 'interview-1',
-    category: 'Technical Interview',
-    title: 'Architecture & Next Steps',
-    sentence: 'I would like to discuss the architecture and next steps.',
-    context: 'Gunakan frasa ini saat memaparkan roadmap teknis di depan interviewer.',
+    id: 'a1-social-1',
+    tier: 'A1',
+    goal: 'social',
+    category: 'Percakapan Santai',
+    title: 'Salam & Perkenalan Diri',
+    sentence: 'Hi, my name is Alex and I am learning English.',
+    context: 'Gunakan saat memperkenalkan diri santai ke teman baru atau komunitas internasional.',
+    phoneticFocus: 'Vokal /ɜː/ pada "learning" dibaca rileks, dan desis lembut /ʃ/ pada "English".',
+    difficulty: 'Easy',
+  },
+  {
+    id: 'a1-travel-1',
+    tier: 'A1',
+    goal: 'travel',
+    category: 'Wisata & Kafe',
+    title: 'Pesan Kopi di Kafe',
+    sentence: 'Can I have an iced latte, please?',
+    context: 'Frasa survival paling sering dipakai saat mampir ke coffee shop di luar negeri.',
+    phoneticFocus: 'Kata "have" berakhiran bunyi /v/ lembut (gigi atas menyentuh bibir bawah).',
+    difficulty: 'Easy',
+  },
+  {
+    id: 'a1-travel-2',
+    tier: 'A1',
+    goal: 'travel',
+    category: 'Arah & Navigasi',
+    title: 'Tanya Arah Stasiun',
+    sentence: 'Excuse me, where is the nearest station?',
+    context: 'Kalimat penting saat mencari stasiun kereta atau halte terdekat.',
+    phoneticFocus: 'Awali dengan "Excuse me" /ɪkˈskjuːz miː/ dengan intonasi sopan meninggi.',
+    difficulty: 'Easy',
+  },
+  {
+    id: 'a1-career-1',
+    tier: 'A1',
+    goal: 'career',
+    category: 'Karir & Profesi',
+    title: 'Status Pekerjaan Saya',
+    sentence: 'I work as a software developer in Jakarta.',
+    context: 'Jawaban singkat dan padat saat ditanya "What do you do?" pada perkenalan awal.',
+    phoneticFocus: 'Kata "work" /wɜːrk/ jangan tertukar dengan "walk". Tekanan di "de-VEL-o-per".',
+    difficulty: 'Easy',
+  },
+  {
+    id: 'a1-academic-1',
+    tier: 'A1',
+    goal: 'academic',
+    category: 'Kuliah & Dosen',
+    title: 'Salam Sopan ke Dosen',
+    sentence: 'Good morning professor, thank you for your time.',
+    context: 'Membuka percakapan santun saat menemui dosen pembimbing atau pengajar.',
+    phoneticFocus: 'Kata "thank" diawali fonem /θ/, gigit ujung lidah sedikit, jangan dibaca "tenk".',
+    difficulty: 'Easy',
+  },
+
+  // --- TIER A2: MENENGAH AWAL (Bimbingan Praktis 45% ID / 55% EN) ---
+  {
+    id: 'a2-career-1',
+    tier: 'A2',
+    goal: 'career',
+    category: 'Daily Standup',
+    title: 'Sprint Daily Standup',
+    sentence: 'Yesterday I completed the API integration and today I will write unit tests.',
+    context: 'Update harian yang padat dan berbobot dalam sesi Agile standup meeting tim engineer.',
+    phoneticFocus: 'Akhiran "-ed" pada "completed" dibaca /ɪd/, dan akhiran "-sts" pada "tests" jangan hilang.',
     difficulty: 'Medium',
   },
   {
-    id: 'code-review-1',
-    category: 'Code Review',
-    title: 'PR Design Trade-offs',
+    id: 'a2-career-2',
+    tier: 'A2',
+    goal: 'career',
+    category: 'Kolaborasi Tim',
+    title: 'Permintaan Review Code PR',
+    sentence: 'Could you please review my pull request when you have time?',
+    context: 'Mengajak rekan kerja meninjau hasil kode di GitHub/GitLab tanpa terkesan menuntut.',
+    phoneticFocus: 'Huruf "l" pada "could" /kʊd/ adalah silent letter (tidak dibaca).',
+    difficulty: 'Medium',
+  },
+  {
+    id: 'a2-travel-1',
+    tier: 'A2',
+    goal: 'travel',
+    category: 'Hotel & Menginap',
+    title: 'Check-in Hotel',
+    sentence: 'I have a reservation under the name Budi for two nights.',
+    context: 'Konfirmasi reservasi kamar saat tiba di meja resepsionis hotel.',
+    phoneticFocus: 'Tekanan kata "reservation" ada di suku kata ketiga: rez-er-VEI-shun.',
+    difficulty: 'Medium',
+  },
+  {
+    id: 'a2-academic-1',
+    tier: 'A2',
+    goal: 'academic',
+    category: 'Tugas Kuliah',
+    title: 'Konfirmasi Batas Pengumpulan',
+    sentence: 'Could you please clarify the deadline for this assignment?',
+    context: 'Menanyakan kejelasan batas waktu pengumpulan tugas atau revisi draft skripsi.',
+    phoneticFocus: 'Kata "clarify" dibaca /ˈklærəfaɪ/, dan huruf "g" pada "assignment" tidak dibaca.',
+    difficulty: 'Medium',
+  },
+  {
+    id: 'a2-social-1',
+    tier: 'A2',
+    goal: 'social',
+    category: 'Hobi & Santai',
+    title: 'Menceritakan Hobi Akhir Pekan',
+    sentence: 'On weekends I usually enjoy playing music and watching movies.',
+    context: 'Membangun relasi personal saat ngobrol santai bersama kenalan baru.',
+    phoneticFocus: 'Kata "usually" dibaca /ˈjuːʒuəli/ dengan getaran lembut /ʒ/.',
+    difficulty: 'Medium',
+  },
+
+  // --- TIER B1: MANDIRI KERJA & DISKUSI (Bilingual Halus 20% ID / 80% EN) ---
+  {
+    id: 'b1-career-1',
+    tier: 'B1',
+    goal: 'career',
+    category: 'Code Review & Arsitektur',
+    title: 'Tinjauan Trade-offs Arsitektur',
     sentence: 'Could you please explain the trade offs of this approach?',
     context: 'Pertanyaan diplomatis dan profesional untuk meninjau keputusan arsitektur pada Pull Request.',
-    difficulty: 'Medium',
-  },
-  {
-    id: 'standup-1',
-    category: 'Daily Standup',
-    title: 'Sprint Progress Update',
-    sentence: 'Yesterday I completed the API integration and today I will write unit tests.',
-    context: 'Update harian yang padat dan berbobot dalam sesi Agile standup meeting.',
+    phoneticFocus: 'Akhiran "approach" berbunyi /tʃ/ yang tajam dan tegas.',
     difficulty: 'Advanced',
   },
   {
-    id: 'incident-1',
+    id: 'b1-career-2',
+    tier: 'B1',
+    goal: 'career',
     category: 'Incident & Cloud',
-    title: 'Performance Bottleneck',
+    title: 'Laporan Bottleneck Sistem Produksi',
     sentence: 'We detected a performance bottleneck in the production deployment.',
-    context: 'Laporan insiden sistem cloud saat latency melonjak di server produksi.',
+    context: 'Melaporkan lonjakan latency server produksi di depan Tech Lead atau tim DevOps.',
+    phoneticFocus: 'Tekanan pada "performance" (per-FOR-mens) dan "production" (pro-DAK-shun).',
     difficulty: 'Advanced',
   },
   {
-    id: 'networking-1',
-    category: 'Collaboration',
-    title: 'Expressing Appreciation',
-    sentence: 'I really appreciate your assistance with this project.',
-    context: 'Membangun relasi profesional dan apresiasi antar anggota tim engineer.',
-    difficulty: 'Easy',
+    id: 'b1-academic-1',
+    tier: 'B1',
+    goal: 'academic',
+    category: 'Presentasi Skripsi',
+    title: 'Pemaparan Hasil Riset Empiris',
+    sentence: 'Based on our empirical results, the speech recognition accuracy improved significantly.',
+    context: 'Menyampaikan temuan riset empiris di depan dosen penguji saat sidang tugas akhir.',
+    phoneticFocus: 'Kata "empirical" /ɪmˈpɪrɪkəl/ dan "significantly" /sɪɡˈnɪfɪkəntli/ beritme stabil.',
+    difficulty: 'Advanced',
+  },
+  {
+    id: 'b1-travel-1',
+    tier: 'B1',
+    goal: 'travel',
+    category: 'Layanan Bandara',
+    title: 'Menangani Kendala Bagasi',
+    sentence: 'Excuse me, my baggage seems to be delayed and I need assistance with filing a report.',
+    context: 'Menghubungi petugas lost and found saat koper tertinggal atau belum keluar di bandara.',
+    phoneticFocus: 'Frasa "seems to be" dibaca menyatu (connected speech) /siːmz tə biː/.',
+    difficulty: 'Advanced',
+  },
+  {
+    id: 'b1-social-1',
+    tier: 'B1',
+    goal: 'social',
+    category: 'Diskusi Opini',
+    title: 'Menyampaikan Sudut Pandang Alternatif',
+    sentence: 'I see your point, but we might want to consider alternative options before deciding.',
+    context: 'Menyampaikan perbedaan pendapat secara santun dan diplomatis dalam diskusi.',
+    phoneticFocus: 'Gunakan intonasi turun-naik (fall-rise) pada "I see your point" agar ramah.',
+    difficulty: 'Advanced',
   },
 ];
 
 export default function SpeakingPracticePage() {
-  const [selectedScenarioIndex, setSelectedScenarioIndex] = useState<number>(0);
+  const [selectedTierFilter, setSelectedTierFilter] = useState<'all' | UserProficiencyTier>('all');
+  const [selectedGoalFilter, setSelectedGoalFilter] = useState<'all' | UserLearningGoal>('all');
+  const [activeScenarioId, setActiveScenarioId] = useState<string>(PRESET_SCENARIOS[0].id);
   const [isCustomMode, setIsCustomMode] = useState<boolean>(false);
   const [customInput, setCustomInput] = useState<string>('');
   const [activeSentence, setActiveSentence] = useState<string>(PRESET_SCENARIOS[0].sentence);
@@ -135,6 +283,7 @@ export default function SpeakingPracticePage() {
   const animationFrameRef = useRef<number | null>(null);
   const recognitionRef = useRef<any>(null);
   const userAudioElementRef = useRef<HTMLAudioElement | null>(null);
+  const recordingStartTimeRef = useRef<number>(0);
 
   useEffect(() => {
     // Check Speech Recognition support in browser
@@ -144,23 +293,45 @@ export default function SpeakingPracticePage() {
       if (!SpeechRec) {
         setSpeechSupported(false);
       }
+      const prefs = getUserPreferences();
+      if (prefs.proficiencyTier) {
+        setSelectedTierFilter(prefs.proficiencyTier);
+      }
+      if (prefs.goal) {
+        setSelectedGoalFilter(prefs.goal);
+      }
+      const matched =
+        PRESET_SCENARIOS.find((s) => s.tier === prefs.proficiencyTier && s.goal === prefs.goal) ||
+        PRESET_SCENARIOS.find((s) => s.tier === prefs.proficiencyTier) ||
+        PRESET_SCENARIOS[0];
+      setActiveScenarioId(matched.id);
+      setActiveSentence(matched.sentence);
     }
 
     return () => {
       stopRecordingCleanup();
+      stopSpeech();
       if (recordedAudioUrl) {
         URL.revokeObjectURL(recordedAudioUrl);
       }
     };
   }, []);
 
+  const activeScenario =
+    PRESET_SCENARIOS.find((s) => s.id === activeScenarioId) || PRESET_SCENARIOS[0];
+
+  const filteredScenarios = PRESET_SCENARIOS.filter((scenario) => {
+    const matchesTier = selectedTierFilter === 'all' || scenario.tier === selectedTierFilter;
+    const matchesGoal = selectedGoalFilter === 'all' || scenario.goal === selectedGoalFilter;
+    return matchesTier && matchesGoal;
+  });
+
   // Update active sentence when scenario changes
-  function handleSelectScenario(index: number) {
+  function handleSelectScenario(scenario: SpeakingScenario) {
     playBubblePop();
     setIsCustomMode(false);
-    setSelectedScenarioIndex(index);
-    const sent = PRESET_SCENARIOS[index].sentence;
-    setActiveSentence(sent);
+    setActiveScenarioId(scenario.id);
+    setActiveSentence(scenario.sentence);
     resetEvaluation();
   }
 
@@ -254,6 +425,7 @@ export default function SpeakingPracticePage() {
     setMicError(null);
     setLiveTranscript('');
     audioChunksRef.current = [];
+    recordingStartTimeRef.current = Date.now();
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -358,10 +530,31 @@ export default function SpeakingPracticePage() {
     }
   }
 
-  // Jalankan Evaluasi Pengucapan ELSA
+  // Jalankan Evaluasi Pengucapan ELSA dengan Analisis Temporal Fluency
   function runEvaluation(transcript: string) {
-    const result = evaluatePronunciation(activeSentence, transcript);
+    const durationSec =
+      recordingStartTimeRef.current > 0 ? (Date.now() - recordingStartTimeRef.current) / 1000 : undefined;
+    const result = evaluatePronunciation(activeSentence, transcript, durationSec);
     setEvaluation(result);
+
+    // Otomatis masukkan kata-kata dengan skor kurang optimal (<80% / yellow / red) ke Leitner Spaced Review
+    if (result.wordScores && result.wordScores.length > 0) {
+      result.wordScores.forEach((ws) => {
+        if (ws.status === 'red' || ws.status === 'yellow') {
+          const phonetic = getPhoneticRepresentation(ws.word);
+          ingestSpokenMistake({
+            word: ws.word,
+            targetSentence: activeSentence,
+            ipa: phonetic,
+            articulatoryHint: ws.feedback || `Latih kembali artikulasi kata "${ws.word}" dengan santai dan jelas.`,
+          });
+        }
+      });
+    }
+
+    // Catat progres kebiasaan harian (Habit Loop)
+    const earnedXp = result.overallScore >= 80 ? 30 : 15;
+    recordPracticeSession(2, earnedXp);
 
     if (result.overallScore >= 80 && !hasCelebrated) {
       playCelebrationSound();
@@ -412,7 +605,7 @@ export default function SpeakingPracticePage() {
           <div className="space-y-1.5">
             <div className="flex items-center gap-2">
               <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400 font-black text-xs border border-emerald-500/40">
-                🎙️
+                <Mic className="h-3.5 w-3.5 text-emerald-400" />
               </span>
               <span className="text-xs font-black uppercase tracking-wider text-emerald-400">
                 100% Free Client-Side AI Coach
@@ -442,51 +635,170 @@ export default function SpeakingPracticePage() {
 
         {/* SCENARIO SELECTOR (Engineering Scenarios & Custom Input) */}
         <div className="card-cyber p-5 space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#1E374D] pb-3">
             <div className="flex items-center gap-2">
               <BookOpen className="h-4 w-4 text-emerald-400" />
               <h2 className="text-sm font-black uppercase tracking-wider text-white">
-                Pilih Skenario Percakapan
+                Pilih Skenario Percakapan Berjenjang
               </h2>
             </div>
-            <span className="text-xs text-slate-400 font-mono">
-              {isCustomMode ? 'Mode Kustom' : `${selectedScenarioIndex + 1} / ${PRESET_SCENARIOS.length}`}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-400 font-mono">
+                {isCustomMode
+                  ? 'Mode Kustom'
+                  : `${filteredScenarios.findIndex((s) => s.id === activeScenarioId) + 1 || 1} / ${filteredScenarios.length} Skenario`}
+              </span>
+            </div>
           </div>
 
-          {/* Preset Buttons */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
-            {PRESET_SCENARIOS.map((scenario, idx) => (
+          {/* FILTER 1: TIER CEFR & BILINGUAL RATIO */}
+          <div className="space-y-1.5">
+            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+              <span>Tingkat Kemahiran (CEFR &amp; Rasio Bimbingan):</span>
+              <span className="text-[10px] text-cyan-400 font-mono">Metode Sandwich ID-EN</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
               <button
-                key={scenario.id}
                 type="button"
-                onClick={() => handleSelectScenario(idx)}
-                className={`p-3 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between gap-1.5 ${
-                  !isCustomMode && selectedScenarioIndex === idx
-                    ? 'border-emerald-400 bg-emerald-500/15 text-white shadow-[0_0_15px_rgba(0,229,117,0.2)]'
-                    : 'border-[#1E374D] bg-[#0A131C] text-slate-400 hover:text-white hover:border-slate-600'
+                onClick={() => {
+                  playBubblePop();
+                  setSelectedTierFilter('all');
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer border ${
+                  selectedTierFilter === 'all'
+                    ? 'bg-cyan-500/20 text-cyan-300 border-cyan-400 shadow-[0_0_12px_rgba(0,210,255,0.2)]'
+                    : 'bg-[#0A131C] text-slate-400 border-[#1E374D] hover:text-white'
                 }`}
               >
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-mono uppercase text-emerald-400 font-bold">
-                    {scenario.category}
-                  </span>
-                  <span
-                    className={`text-[9px] px-1.5 py-0.5 rounded ${
-                      scenario.difficulty === 'Easy'
-                        ? 'bg-emerald-500/20 text-emerald-400'
-                        : scenario.difficulty === 'Medium'
-                        ? 'bg-amber-500/20 text-amber-400'
-                        : 'bg-rose-500/20 text-rose-400'
+                Semua Tingkat ({PRESET_SCENARIOS.length})
+              </button>
+              {(['A1', 'A2', 'B1'] as UserProficiencyTier[]).map((tierKey) => {
+                const tierMeta = PROFICIENCY_TIERS[tierKey];
+                const count = PRESET_SCENARIOS.filter((s) => s.tier === tierKey).length;
+                const isSelected = selectedTierFilter === tierKey;
+                return (
+                  <button
+                    key={tierKey}
+                    type="button"
+                    onClick={() => {
+                      playBubblePop();
+                      setSelectedTierFilter(tierKey);
+                    }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer border flex items-center gap-1.5 ${
+                      isSelected
+                        ? tierKey === 'A1'
+                          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400 shadow-[0_0_12px_rgba(0,229,117,0.25)]'
+                          : tierKey === 'A2'
+                          ? 'bg-cyan-500/20 text-cyan-300 border-cyan-400 shadow-[0_0_12px_rgba(0,210,255,0.25)]'
+                          : 'bg-purple-500/20 text-purple-300 border-purple-400 shadow-[0_0_12px_rgba(168,85,247,0.25)]'
+                        : 'bg-[#0A131C] text-slate-400 border-[#1E374D] hover:text-white'
                     }`}
                   >
-                    {scenario.difficulty}
-                  </span>
-                </div>
-                <div className="text-xs font-bold line-clamp-1">{scenario.title}</div>
-              </button>
-            ))}
+                    <span>{tierMeta.titleId}</span>
+                    <span className="text-[10px] opacity-75 font-normal">
+                      ({tierKey === 'A1' ? '70% ID' : tierKey === 'A2' ? '45% ID' : '20% ID'} • {count})
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
+
+          {/* FILTER 2: LEARNING GOAL / TOPIK */}
+          <div className="space-y-1.5">
+            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+              Tujuan Pembelajaran:
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  playBubblePop();
+                  setSelectedGoalFilter('all');
+                }}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer border ${
+                  selectedGoalFilter === 'all'
+                    ? 'bg-slate-700 text-white border-slate-500'
+                    : 'bg-[#0A131C] text-slate-400 border-[#1E374D] hover:text-white'
+                }`}
+              >
+                Semua Topik
+              </button>
+              {(Object.keys(LEARNING_GOALS) as UserLearningGoal[]).map((goalKey) => {
+                const goalMeta = LEARNING_GOALS[goalKey];
+                const isSelected = selectedGoalFilter === goalKey;
+                return (
+                  <button
+                    key={goalKey}
+                    type="button"
+                    onClick={() => {
+                      playBubblePop();
+                      setSelectedGoalFilter(goalKey);
+                    }}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer border flex items-center gap-1.5 ${
+                      isSelected
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400 shadow-[0_0_10px_rgba(0,229,117,0.2)]'
+                        : 'bg-[#0A131C] text-slate-400 border-[#1E374D] hover:text-white'
+                    }`}
+                  >
+                    <span>{goalMeta.emoji}</span>
+                    <span>{goalMeta.titleId}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Preset Buttons Grid */}
+          {filteredScenarios.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-1">
+              {filteredScenarios.map((scenario) => {
+                const isSelected = !isCustomMode && activeScenarioId === scenario.id;
+                return (
+                  <button
+                    key={scenario.id}
+                    type="button"
+                    onClick={() => handleSelectScenario(scenario)}
+                    className={`p-3 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between gap-2 ${
+                      isSelected
+                        ? 'border-emerald-400 bg-emerald-500/15 text-white shadow-[0_0_15px_rgba(0,229,117,0.2)]'
+                        : 'border-[#1E374D] bg-[#0A131C] text-slate-400 hover:text-white hover:border-slate-600'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-1">
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className={`text-[9px] font-black px-1.5 py-0.5 rounded ${
+                            scenario.tier === 'A1'
+                              ? 'bg-emerald-500/20 text-emerald-400'
+                              : scenario.tier === 'A2'
+                              ? 'bg-cyan-500/20 text-cyan-400'
+                              : 'bg-purple-500/20 text-purple-400'
+                          }`}
+                        >
+                          {scenario.tier}
+                        </span>
+                        <span className="text-[10px] font-mono text-emerald-400 font-semibold truncate max-w-[120px]">
+                          {scenario.category}
+                        </span>
+                      </div>
+                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                        {scenario.difficulty}
+                      </span>
+                    </div>
+                    <div className="text-xs font-bold text-white line-clamp-1">{scenario.title}</div>
+                    <div className="text-[11px] text-slate-400 italic line-clamp-1 font-mono">
+                      &quot;{scenario.sentence}&quot;
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="p-4 rounded-xl bg-[#0A131C] border border-[#1E374D] text-center text-xs text-slate-400">
+              Tidak ada skenario yang sesuai dengan kombinasi filter ini. Pilih &quot;Semua Tingkat&quot; atau &quot;Semua Topik&quot;.
+            </div>
+          )}
 
           {/* Custom Input Toggle Bar */}
           <div className="pt-2 border-t border-[#1E374D]/60 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
@@ -522,9 +834,9 @@ export default function SpeakingPracticePage() {
                   <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
                     Target Kalimat
                   </span>
-                  {!isCustomMode && (
+                  {!isCustomMode && activeScenario && (
                     <span className="text-[11px] text-cyan-400 font-mono">
-                      ({PRESET_SCENARIOS[selectedScenarioIndex].title})
+                      ({activeScenario.title})
                     </span>
                   )}
                 </div>
@@ -573,12 +885,47 @@ export default function SpeakingPracticePage() {
                 </div>
               </div>
 
-              {/* Context Hint */}
-              {!isCustomMode && (
-                <p className="text-xs text-slate-400 italic flex items-center gap-1.5">
-                  <Lightbulb className="h-3.5 w-3.5 text-amber-400 shrink-0" />
-                  <span>{PRESET_SCENARIOS[selectedScenarioIndex].context}</span>
-                </p>
+              {/* Context Hint / Bilingual Coaching Box */}
+              {!isCustomMode && activeScenario && (
+                <div className="p-3.5 rounded-xl bg-[#08121C] border border-[#1E374D] space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                          activeScenario.tier === 'A1'
+                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                            : activeScenario.tier === 'A2'
+                            ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40'
+                            : 'bg-purple-500/20 text-purple-400 border border-purple-500/40'
+                        }`}
+                      >
+                        Tier {activeScenario.tier} • {PROFICIENCY_TIERS[activeScenario.tier]?.titleId || activeScenario.tier}
+                      </span>
+                      <span className="text-[10px] font-mono text-slate-400">
+                        {activeScenario.tier === 'A1'
+                          ? '70% Panduan ID'
+                          : activeScenario.tier === 'A2'
+                          ? '45% Panduan ID'
+                          : '20% Panduan ID'}
+                      </span>
+                    </div>
+                    <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1.5">
+                      <Target className="h-3 w-3 text-cyan-400" />
+                      <span>{LEARNING_GOALS[activeScenario.goal]?.titleId || activeScenario.category}</span>
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300">
+                    <strong className="text-white">Situasi:</strong> {activeScenario.context}
+                  </p>
+                  {activeScenario.phoneticFocus && (
+                    <div className="flex items-start gap-1.5 text-xs text-amber-300 bg-amber-500/10 p-2 rounded-lg border border-amber-500/20">
+                      <Lightbulb className="h-3.5 w-3.5 text-amber-400 shrink-0 mt-0.5" />
+                      <span>
+                        <strong className="text-amber-200">Tips Fonem Kritis:</strong> {activeScenario.phoneticFocus}
+                      </span>
+                    </div>
+                  )}
+                </div>
               )}
 
               {/* WORD DISPLAY (Before & After Evaluation) */}
@@ -707,6 +1054,56 @@ export default function SpeakingPracticePage() {
                     </div>
                   )}
 
+                  {/* Syllable Stress Guidance */}
+                  {(() => {
+                    const stressGuide = getWordStressGuidance(selectedWordDetail.word);
+                    if (!stressGuide) return null;
+                    return (
+                      <div className="p-3 rounded-xl bg-[#08121C] border border-cyan-500/30 space-y-1">
+                        <div className="flex items-center justify-between text-[11px] font-bold">
+                          <span className="text-cyan-300">Pola Penekanan Suku Kata:</span>
+                          <span className="font-mono text-emerald-400 font-extrabold tracking-wider">
+                            {stressGuide.syllables}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-300 leading-relaxed">
+                          {stressGuide.prosodyTip}
+                        </p>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Recognition Misalignment (User Spoken vs Target Word) */}
+                  {selectedWordDetail.recognizedWord &&
+                    selectedWordDetail.recognizedWord.toLowerCase() !==
+                      selectedWordDetail.word.toLowerCase() && (
+                      <div className="text-xs bg-rose-500/10 p-2.5 rounded-lg border border-rose-500/30 flex items-center justify-between text-slate-300">
+                        <span>
+                          AI Mendengar:{' '}
+                          <strong className="text-rose-400 font-mono">
+                            &ldquo;{selectedWordDetail.recognizedWord}&rdquo;
+                          </strong>
+                        </span>
+                        <span>
+                          Target:{' '}
+                          <strong className="text-emerald-400 font-mono">
+                            &ldquo;{selectedWordDetail.word}&rdquo;
+                          </strong>
+                        </span>
+                      </div>
+                    )}
+
+                  {/* Drill in Minimal Pairs Studio if not green */}
+                  {selectedWordDetail.status !== 'green' && (
+                    <Link
+                      href="/practice/minimal-pairs"
+                      className="w-full py-2 px-3 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/40 text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <Target className="h-3.5 w-3.5" />
+                      <span>Latih Pasangan Fonem di Minimal Pairs Studio</span>
+                    </Link>
+                  )}
+
                   {/* Interactive Letter Spelling Chips ("Setiap Memilih Huruf Ada Suara AI-nya") */}
                   <div className="pt-2 border-t border-[#1E374D]/60 space-y-1.5">
                     <div className="text-[11px] font-bold text-slate-400 flex items-center justify-between">
@@ -743,12 +1140,18 @@ export default function SpeakingPracticePage() {
               {/* RECORDING / LIVE VISUALIZER CONSOLE */}
               <div className="p-5 rounded-2xl bg-[#070D14] border border-[#1E374D] flex flex-col items-center justify-center space-y-4">
                 {/* Acoustic Spectrogram & Frequency Canvas */}
-                <div className="w-full max-w-md">
+                <div className="w-full max-w-md space-y-3">
                   <AcousticSpectrogram
                     isRecording={isRecording}
                     analyserNode={analyserRef.current}
                     height={56}
                     accentColor="#00E575"
+                  />
+                  <AcousticPitchContour
+                    isRecording={isRecording}
+                    analyserNode={analyserRef.current}
+                    targetSentence={activeSentence}
+                    height={72}
                   />
                 </div>
 
@@ -944,7 +1347,10 @@ export default function SpeakingPracticePage() {
                       <div className="flex justify-between text-xs font-bold">
                         <span className="text-slate-400 flex items-center gap-1.5">
                           <Activity className="h-3.5 w-3.5 text-cyan-400" />
-                          <span>Fluency (Kelancaran)</span>
+                          <span>
+                            Fluency (Kelancaran
+                            {evaluation.temporalMetrics ? ` • ${evaluation.temporalMetrics.wordsPerMinute} WPM` : ''})
+                          </span>
                         </span>
                         <span className="text-cyan-400 font-mono">{evaluation.fluencyScore}%</span>
                       </div>
@@ -954,6 +1360,12 @@ export default function SpeakingPracticePage() {
                           className="h-full bg-cyan-400 rounded-full transition-all duration-500"
                         />
                       </div>
+                      {evaluation.temporalMetrics && (
+                        <div className="flex items-center justify-between text-[11px] pt-1 text-slate-400">
+                          <span className="text-cyan-400 font-medium">{evaluation.temporalMetrics.cefrSpeedTier}</span>
+                          <span className="font-mono text-slate-500">{evaluation.temporalMetrics.durationSeconds}s durasi</span>
+                        </div>
+                      )}
                     </div>
 
                     <div className="space-y-1">
@@ -1017,11 +1429,21 @@ export default function SpeakingPracticePage() {
                                 </span>
                               </div>
                               <div className="text-[11px] text-slate-400">{issue.description}</div>
-                              <p className="text-[11px] text-amber-200/90 leading-relaxed italic">
-                                💡 {issue.pedagogicalTip}
+                              <p className="text-[11px] text-amber-200/90 leading-relaxed italic flex items-start gap-1">
+                                <Lightbulb className="h-3 w-3 text-amber-400 shrink-0 mt-0.5" />
+                                <span>{issue.pedagogicalTip}</span>
                               </p>
                             </div>
                           ))}
+                        </div>
+                        <div className="pt-1">
+                          <Link
+                            href="/practice/minimal-pairs"
+                            className="w-full py-2 px-3 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
+                          >
+                            <Target className="h-3.5 w-3.5" />
+                            <span>Latih Pasangan Fonem Tertukar di Studio</span>
+                          </Link>
                         </div>
                       </div>
                     );
@@ -1044,45 +1466,45 @@ export default function SpeakingPracticePage() {
             </div>
 
             {/* AI ACOUSTIC MENTOR FEEDBACK CARD */}
-            <div className="card-cyber p-5 space-y-4 border-cyan-500/30">
-              <div className="flex items-center gap-3">
-                <div className="relative h-12 w-12 rounded-2xl bg-gradient-to-tr from-cyan-500/20 to-emerald-500/20 border-2 border-cyan-400/60 shadow-[0_0_15px_rgba(0,210,255,0.25)] flex items-center justify-center shrink-0 text-cyan-400">
-                  <Activity className="h-6 w-6 stroke-[2.2]" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-black text-white">Fluenzy AI Voice Lab</h3>
-                  <p className="text-[11px] text-cyan-400 font-mono">Acoustic & Phonetic Coach</p>
-                </div>
-              </div>
-
-              <div className="p-3.5 rounded-xl bg-[#0A131C] border border-[#1E374D] text-xs text-slate-300 leading-relaxed">
-                {evaluation ? (
-                  evaluation.overallScore >= 80 ? (
-                    <span>
-                      &ldquo;Luar biasa! Pelafalanmu sudah sangat natural dan siap digunakan dalam
-                      meeting teknis nyata. Pertahankan ritmenya!&rdquo;
-                    </span>
-                  ) : (
-                    <span>
-                      &ldquo;Bagus sekali usahanya! Coba perhatikan kata-kata berlabel kuning & merah.
-                      Dengarkan versi Turtle Mode (0.65x) untuk mendengarkan tiap suku kata.&rdquo;
-                    </span>
-                  )
-                ) : (
-                  <span>
-                    &ldquo;Selamat datang di Fluenzy AI Voice Lab! Di lab ini, kita akan melatih otot mulut untuk
-                    melafalkan kata teknis bahasa Inggris dengan artikulasi presisi. Ayo coba rekam!&rdquo;
-                  </span>
+            {evaluation ? (
+              <div className="space-y-4">
+                <EmpatheticFeedbackCard
+                  feedback={generateEmpatheticFeedback({
+                    result: evaluation,
+                    tier: activeScenario.tier,
+                    goal: activeScenario.goal,
+                    targetSentence: activeSentence,
+                    spokenText: liveTranscript,
+                  })}
+                  onRetry={handleToggleRecording}
+                />
+                {evaluation.overallScore >= 80 && (
+                  <div className="p-3.5 rounded-2xl bg-emerald-500/15 border border-emerald-500/40 flex items-center justify-between shadow-[0_0_15px_rgba(0,229,117,0.2)]">
+                    <span className="text-xs font-bold text-emerald-300">Bonus Latihan Selesai</span>
+                    <span className="text-xs font-black text-emerald-400 font-mono">+60 XP</span>
+                  </div>
                 )}
               </div>
-
-              {evaluation && evaluation.overallScore >= 80 && (
-                <div className="p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/40 flex items-center justify-between">
-                  <span className="text-xs font-bold text-emerald-300">Bonus Latihan Selesai</span>
-                  <span className="text-xs font-black text-emerald-400 font-mono">+60 XP</span>
+            ) : (
+              <div className="card-cyber p-5 space-y-4 border-cyan-500/30">
+                <div className="flex items-center gap-3">
+                  <div className="relative h-12 w-12 rounded-2xl bg-gradient-to-tr from-cyan-500/20 to-emerald-500/20 border-2 border-cyan-400/60 shadow-[0_0_15px_rgba(0,210,255,0.25)] flex items-center justify-center shrink-0 text-cyan-400">
+                    <Activity className="h-6 w-6 stroke-[2.2]" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-white">Fluenzy AI Voice Lab</h3>
+                    <p className="text-[11px] text-cyan-400 font-mono">Bilingual Empathetic Coach</p>
+                  </div>
                 </div>
-              )}
-            </div>
+
+                <div className="p-3.5 rounded-xl bg-[#0A131C] border border-[#1E374D] text-xs text-slate-300 leading-relaxed">
+                  <span>
+                    &ldquo;Selamat datang di Fluenzy AI Voice Lab! Di lab ini, kita akan melatih otot mulut untuk
+                    melafalkan bahasa Inggris dengan artikulasi presisi. Ayo coba rekam suaramu!&rdquo;
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </main>

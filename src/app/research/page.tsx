@@ -11,8 +11,10 @@ import {
   Sparkles,
   ClipboardList,
   BarChart2,
+  Brain,
 } from 'lucide-react';
 import { SUS_QUESTIONS } from '@/lib/core/sus';
+import { ThesisReportGenerator } from '@/components/ThesisReportGenerator';
 
 export default function ResearchEvaluationPage() {
   const [susAnswers, setSusAnswers] = useState<number[]>([4, 2, 4, 2, 4, 2, 4, 2, 4, 2]);
@@ -79,6 +81,28 @@ export default function ResearchEvaluationPage() {
       </header>
 
       <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 space-y-8">
+        {/* LINK KE TES DIAGNOSTIK PRE/POST TEST */}
+        <div className="rounded-3xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-mono">
+              Instrumen Pengujian Fonetik
+            </span>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <Brain className="h-4 w-4 text-emerald-600" />
+              <span>Tes Diagnostik Fonetik (Pengukuran Pre-Test &amp; Post-Test Efektivitas)</span>
+            </h3>
+            <p className="text-xs text-slate-600 dark:text-slate-400">
+              Jalankan tes fonetik 3 butir untuk mengukur peningkatan kemampuan responden sebelum dan sesudah perlakuan modul latihan.
+            </p>
+          </div>
+          <Link
+            href="/practice/diagnostic"
+            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition flex items-center gap-1.5 shrink-0 self-start sm:self-center"
+          >
+            <span>Buka Modul Tes Diagnostik</span>
+          </Link>
+        </div>
+
         {/* BAGIAN 1: EKSPOR DATASET CSV */}
         <div className="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-4">
           <div>
@@ -91,9 +115,9 @@ export default function ResearchEvaluationPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
             <a
-              href="/api/research/export?type=answers"
+              href="/api/research/export?type=answers&key=fluenzy-thesis-2026"
               download
               className="flex flex-col justify-between rounded-2xl border border-slate-200 dark:border-slate-800 p-4 bg-slate-50 dark:bg-slate-800/40 hover:border-emerald-500 transition group"
             >
@@ -114,7 +138,7 @@ export default function ResearchEvaluationPage() {
             </a>
 
             <a
-              href="/api/research/export?type=mastery"
+              href="/api/research/export?type=mastery&key=fluenzy-thesis-2026"
               download
               className="flex flex-col justify-between rounded-2xl border border-slate-200 dark:border-slate-800 p-4 bg-slate-50 dark:bg-slate-800/40 hover:border-indigo-500 transition group"
             >
@@ -135,7 +159,7 @@ export default function ResearchEvaluationPage() {
             </a>
 
             <a
-              href="/api/research/export?type=prepost"
+              href="/api/research/export?type=prepost&key=fluenzy-thesis-2026"
               download
               className="flex flex-col justify-between rounded-2xl border border-slate-200 dark:border-slate-800 p-4 bg-slate-50 dark:bg-slate-800/40 hover:border-amber-500 transition group"
             >
@@ -154,8 +178,91 @@ export default function ResearchEvaluationPage() {
                 <Download className="h-4 w-4" /> Unduh CSV
               </div>
             </a>
+
+            <a
+              href="/api/research/export?type=sus&key=fluenzy-thesis-2026"
+              download
+              className="flex flex-col justify-between rounded-2xl border border-slate-200 dark:border-slate-800 p-4 bg-slate-50 dark:bg-slate-800/40 hover:border-cyan-500 transition group"
+            >
+              <div>
+                <span className="text-[10px] font-bold text-cyan-600 uppercase tracking-wider block mb-1">
+                  Usability Standar
+                </span>
+                <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 group-hover:text-cyan-600">
+                  SUS Survey Dataset
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  10 Butir Likert, skor SUS murni, grade, dan feedback kualitatif.
+                </p>
+              </div>
+              <div className="mt-4 flex items-center gap-1.5 text-xs font-bold text-cyan-600">
+                <Download className="h-4 w-4" /> Unduh CSV
+              </div>
+            </a>
           </div>
         </div>
+
+        {/* BAGIAN 1.5: LANDASAN METODOLOGI & FORMULA STATISTIK SKRIPSI */}
+        <div className="rounded-3xl bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <BarChart2 className="h-4 w-4 text-emerald-500" />
+              Landasan Metodologi &amp; Formula Analisis Skripsi (Bab 3 &amp; 4)
+            </h2>
+            <span className="text-[10px] font-mono text-slate-500 uppercase">Statistical Standard</span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+            {/* Hake Gain */}
+            <div className="p-4 rounded-2xl bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-800 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-extrabold text-amber-600 dark:text-amber-400">
+                  1. Normalized Gain (Hake, 1998)
+                </span>
+                <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 font-mono">
+                  Uji Efektivitas Belajar
+                </span>
+              </div>
+              <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
+                Mengukur efektivitas peningkatan kemampuan pelafalan antara nilai pre-test dan post-test responden:
+              </p>
+              <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-center font-mono font-bold text-slate-800 dark:text-slate-200">
+                g = (PostTest - PreTest) / (1 - PreTest)
+              </div>
+              <ul className="text-[11px] text-slate-500 space-y-1 list-disc list-inside">
+                <li><strong>Tinggi:</strong> g &ge; 0.70</li>
+                <li><strong>Sedang:</strong> 0.30 &le; g &lt; 0.70</li>
+                <li><strong>Rendah:</strong> g &lt; 0.30</li>
+              </ul>
+            </div>
+
+            {/* SUS Scale */}
+            <div className="p-4 rounded-2xl bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-800 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-extrabold text-cyan-600 dark:text-cyan-400">
+                  2. System Usability Scale (Brooke, 1996)
+                </span>
+                <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-600 font-mono">
+                  Uji Usabilitas Sistem
+                </span>
+              </div>
+              <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
+                10 butir pertanyaan terstandar dengan bobot butir ganjil (X-1) dan butir genap (5-X) dikali 2.5:
+              </p>
+              <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-center font-mono font-bold text-slate-800 dark:text-slate-200">
+                Skor SUS = [&sum;(Ganjil - 1) + &sum;(5 - Genap)] &times; 2.5
+              </div>
+              <ul className="text-[11px] text-slate-500 space-y-1 list-disc list-inside">
+                <li><strong>Ambang Industri:</strong> &ge; 68.0 (Good / Acceptable)</li>
+                <li><strong>Grade A+ / A:</strong> &ge; 80.3 (Excellent / Best Imaginable)</li>
+                <li><strong>Grade C / Marginal:</strong> 51.0 - 67.9</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        {/* BAGIAN 1.8: THESIS ASSISTANT & AUTO-GENERATOR TABEL BAB 4 */}
+        <ThesisReportGenerator />
 
         {/* BAGIAN 2: KUESIONER SYSTEM USABILITY SCALE (SUS) */}
         <div className="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-6">

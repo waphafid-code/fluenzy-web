@@ -16,15 +16,18 @@ import {
   FlaskConical,
   Sparkles,
   Settings,
+  Mic,
 } from 'lucide-react';
 import { playBubblePop, speakText } from '@/lib/audio/speech';
 import {
   getUserPreferences,
   getAcousticProfile,
-  EnglishAccentChoice,
-  VoiceGenderChoice,
+  TargetAccent,
+  VoiceTimbre,
+  MascotChoice,
 } from '@/lib/core/preferences';
 import { PersonalizationModal } from '@/components/PersonalizationModal';
+import { LottiePlayer } from '@/components/ui/LottiePlayer';
 
 export interface NavTabItem {
   id: 'roadmap' | 'arena' | 'insights' | 'profile';
@@ -71,35 +74,34 @@ interface NavigationProps {
 
 export function Navigation({ activeTab }: NavigationProps) {
   const pathname = usePathname();
-  const [englishAccent, setEnglishAccent] = useState<EnglishAccentChoice>('us');
-  const [voiceGender, setVoiceGender] = useState<VoiceGenderChoice>('auto');
+  const [targetAccent, setTargetAccent] = useState<TargetAccent>('en-US');
+  const [voiceTimbre, setVoiceTimbre] = useState<VoiceTimbre>('ember');
+  const [mascotChoice, setMascotChoice] = useState<MascotChoice>('boy');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     const prefs = getUserPreferences();
-    setEnglishAccent(prefs.englishAccent);
-    setVoiceGender(prefs.voiceGender);
+    setTargetAccent(prefs.targetAccent || 'en-US');
+    setVoiceTimbre(prefs.voiceTimbre || 'ember');
+    if (prefs.mascot) setMascotChoice(prefs.mascot);
 
     const handlePrefChange = (e: Event) => {
       const customEvent = e as CustomEvent;
-      if (customEvent.detail?.englishAccent) {
-        setEnglishAccent(customEvent.detail.englishAccent);
+      if (customEvent.detail?.targetAccent) {
+        setTargetAccent(customEvent.detail.targetAccent);
       }
-      if (customEvent.detail?.voiceGender) {
-        setVoiceGender(customEvent.detail.voiceGender);
+      if (customEvent.detail?.voiceTimbre) {
+        setVoiceTimbre(customEvent.detail.voiceTimbre);
+      }
+      if (customEvent.detail?.mascot) {
+        setMascotChoice(customEvent.detail.mascot);
       }
     };
     window.addEventListener('fluenzy-preferences-updated', handlePrefChange);
     return () => window.removeEventListener('fluenzy-preferences-updated', handlePrefChange);
   }, []);
 
-  const acoustic = getAcousticProfile();
-  const accentLabel =
-    englishAccent === 'uk'
-      ? 'en-GB'
-      : englishAccent === 'au'
-      ? 'en-AU'
-      : 'en-US';
+  const acoustic = getAcousticProfile(targetAccent, voiceTimbre);
 
   // Auto-detect current active tab from pathname if not explicitly passed
   const currentTab =
@@ -107,14 +109,14 @@ export function Navigation({ activeTab }: NavigationProps) {
     (pathname === '/home' || pathname.startsWith('/home')
       ? 'home'
       : pathname.startsWith('/roadmap')
-      ? 'roadmap'
-      : pathname.startsWith('/arena') || pathname.startsWith('/practice')
-      ? 'arena'
-      : pathname.startsWith('/dashboard') || pathname.startsWith('/insights')
-      ? 'insights'
-      : pathname.startsWith('/profile')
-      ? 'profile'
-      : undefined);
+        ? 'roadmap'
+        : pathname.startsWith('/arena') || pathname.startsWith('/practice')
+          ? 'arena'
+          : pathname.startsWith('/dashboard') || pathname.startsWith('/insights')
+            ? 'insights'
+            : pathname.startsWith('/profile')
+              ? 'profile'
+              : undefined);
 
   function handleTabClick() {
     playBubblePop();
@@ -123,11 +125,11 @@ export function Navigation({ activeTab }: NavigationProps) {
   function handleVoiceLabGreeting() {
     playBubblePop();
     const greeting =
-      englishAccent === 'uk'
+      targetAccent === 'en-GB'
         ? 'Splendid progress! Keep up the brilliant pronunciation practice.'
-        : englishAccent === 'au'
-        ? 'Good on ya! Keep training your accent and rhythm today.'
-        : 'Awesome focus! You are getting closer to native fluency every day.';
+        : targetAccent === 'en-AU'
+          ? 'Good on ya! Keep training your accent and rhythm today.'
+          : 'Awesome focus! You are getting closer to native fluency every day.';
     speakText(greeting, { emotion: 'encouraging' });
   }
 
@@ -172,11 +174,10 @@ export function Navigation({ activeTab }: NavigationProps) {
                   key={tab.id}
                   href={tab.href}
                   onClick={handleTabClick}
-                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition ${
-                    isActive
-                      ? 'tab-cyber-active font-extrabold text-violet-300'
-                      : 'tab-cyber-inactive'
-                  }`}
+                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition ${isActive
+                    ? 'tab-cyber-active font-extrabold text-violet-300'
+                    : 'tab-cyber-inactive'
+                    }`}
                 >
                   <Icon className={`h-4 w-4 ${isActive ? 'text-violet-400' : 'text-slate-400'}`} />
                   <span>{tab.label}</span>
@@ -187,9 +188,15 @@ export function Navigation({ activeTab }: NavigationProps) {
 
           {/* RIGHT GAMIFIED STATS & COMPANION AVATAR */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Streak */}
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#101C27] border border-[#1A2E40] text-xs font-bold text-amber-400 shadow-xs animate-fire-glow">
-              <Flame className="h-4 w-4 fill-amber-400 text-amber-500 animate-pulse" />
+            {/* Streak with Lottie Fire */}
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#101C27] border border-[#1A2E40] text-xs font-bold text-amber-400 shadow-xs">
+              <div className="h-4 w-4 shrink-0 flex items-center justify-center">
+                <LottiePlayer
+                  animationPath="/animations/streak_fire.json"
+                  loop={true}
+                  className="w-full h-full scale-125"
+                />
+              </div>
               <span className="tabular-nums">14 Hari</span>
             </div>
 
@@ -210,18 +217,18 @@ export function Navigation({ activeTab }: NavigationProps) {
               <button
                 type="button"
                 onClick={handleVoiceLabGreeting}
-                title={`Fluenzy Voice Lab: ${accentLabel} • ${acoustic.voiceGender}`}
+                title={`Fluenzy Voice Lab: ${acoustic.label} • ${acoustic.coachTitle}`}
                 className="relative flex items-center gap-2 p-1.5 rounded-xl bg-[#142433] hover:bg-[#1A2F42] border border-[#1E374D] hover:border-emerald-500/40 transition group cursor-pointer"
               >
                 <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
-                  <span className="text-xs">🎙️</span>
+                  <Mic className="h-3.5 w-3.5 text-emerald-400" />
                 </div>
                 <div className="hidden lg:flex flex-col text-left pr-1">
                   <span className="text-[11px] font-bold text-white group-hover:text-emerald-400 transition leading-tight">
-                    {accentLabel}
+                    {acoustic.targetAccent}
                   </span>
                   <span className="text-[9px] text-slate-400 leading-none">
-                    {acoustic.voiceGender}
+                    {acoustic.voiceTimbre}
                   </span>
                 </div>
               </button>
@@ -253,11 +260,10 @@ export function Navigation({ activeTab }: NavigationProps) {
               key={tab.id}
               href={tab.href}
               onClick={handleTabClick}
-              className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition ${
-                isActive
-                  ? 'text-violet-400 bg-violet-500/15'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
+              className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition ${isActive
+                ? 'text-violet-400 bg-violet-500/15'
+                : 'text-slate-400 hover:text-slate-200'
+                }`}
             >
               <Icon className={`h-5 w-5 ${isActive ? 'text-violet-400' : 'text-slate-400'}`} />
               <span className="text-[10px] font-bold mt-0.5">{tab.label}</span>
@@ -270,8 +276,9 @@ export function Navigation({ activeTab }: NavigationProps) {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onPreferencesChanged={(newPrefs) => {
-          setEnglishAccent(newPrefs.englishAccent);
-          setVoiceGender(newPrefs.voiceGender);
+          if (newPrefs.mascot) setMascotChoice(newPrefs.mascot);
+          if (newPrefs.targetAccent) setTargetAccent(newPrefs.targetAccent);
+          if (newPrefs.voiceTimbre) setVoiceTimbre(newPrefs.voiceTimbre);
         }}
       />
     </>
